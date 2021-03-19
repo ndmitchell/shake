@@ -200,8 +200,7 @@ computeDirtySet :: ShakeValue key => (IO String -> IO()) -> Database -> Maybe [k
 computeDirtySet _ _ Nothing = pure Nothing
 computeDirtySet diag database (Just keys) = do
     getId <- getIdFromKey database
-    let ids = maybeToList (getId $ newKey $ AlwaysRerunQ ())
-            <> mapMaybe (getId . newKey) keys
+    let ids = mapMaybe (getId . newKey) keys
         loop x = do
             seen <- State.get
             if x `Set.member` seen then pure () else do

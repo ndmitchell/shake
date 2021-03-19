@@ -143,8 +143,9 @@ shakeRunDatabase = shakeRunDatabaseForKeys (Nothing :: Maybe [()])
 --   plus the list of 'Action' given here.
 --
 --   If a set of dirty keys is given, only the reverse dependencies of these keys
---   will be considered potentially changed; all other keys will be assumed unchanged
---   except for the 'alwaysRerun' key which is always included in the dirty set.
+--   will be considered potentially changed; all other keys will be assumed unchanged.
+--   This includes the 'AlwaysRerunQ' key which is by default always dirty, but
+--   will not here, unless it is included in the input.
 --
 --   Returns the results from the explicitly passed actions along with a list
 --   of actions to run after the database was closed, as added with
