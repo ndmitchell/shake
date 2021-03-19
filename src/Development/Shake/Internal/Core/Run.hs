@@ -56,7 +56,6 @@ import Data.Monoid
 import Prelude
 import General.Ids (Id)
 import qualified Control.Monad.Trans.State.Strict as State
-import Control.Monad.Trans.Class (lift)
 import Data.Foldable (traverse_)
 import Text.Printf
 import Development.Shake.Internal.Rules.Rerun (AlwaysRerunQ(AlwaysRerunQ))
