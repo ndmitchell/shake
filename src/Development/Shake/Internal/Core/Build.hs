@@ -263,7 +263,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                         ,changed = c
                         ,built = globalStep
                         ,depends = flattenDepends localDepends
-                        ,rdepends = mempty
+                        ,rdepends = maybe mempty rdepends r
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = flattenTraces localTraces}
             where
