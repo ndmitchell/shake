@@ -154,7 +154,7 @@ updateReverseDeps myId db prev new = do
         updateResult :: (forall a. Result a -> Result a) -> Status -> Status
         updateResult f (Ready r) = Ready $ f r
         updateResult f (Failed e r) = Failed e (fmap f r)
-        updateResult f (Loaded r) = Loaded $ addDep r
+        updateResult f (Loaded r) = Loaded $ f r
         updateResult _ Running{} = error "Running: can this happen?"
         updateResult _ Missing{} = error "Missing: can this happen?"
 
