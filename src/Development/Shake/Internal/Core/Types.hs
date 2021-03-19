@@ -238,10 +238,13 @@ data Result a = Result
     ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
     ,depends :: ![Depends] -- ^ dependencies (don't run them early)
-    ,rdepends :: !(HashSet Id) -- ^ reverse dependencies
+    ,rdepends :: Maybe (IORef (HashSet Id)) -- ^ reverse dependencies
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
     ,traces :: ![Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
-    } deriving (Show,Functor)
+    } deriving (Functor)
+
+instance Show (Result a) where
+    show _ = "<result>"
 
 instance NFData a => NFData (Result a) where
     -- ignore unpacked fields

@@ -206,7 +206,7 @@ computeDirtySet diag database (Just keys) = do
             if x `Set.member` seen then pure () else do
                 Just (_, Loaded result) <- liftIO $ getKeyValueFromId database x
                 State.put (Set.insert x seen)
-                let next = rdepends result
+                next <- liftIO $ maybe (pure mempty) readIORef $ rdepends result
                 traverse_ loop next
     transitive <- flip State.execStateT Set.empty $ traverse_ loop ids
 
@@ -372,7 +372,7 @@ incrementStep db = runLocked db $ do
     pure step
 
 toStepResult :: Step -> Result (Value, BS_Store)
-toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] mempty 0 []
+toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] Nothing 0 []
 
 fromStepResult :: Result BS_Store -> Step
 fromStepResult = getEx . result
@@ -387,7 +387,7 @@ recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
             ,changed = step
             ,built = step
             ,depends = flattenDepends $ localDepends local
-            ,rdepends = mempty
+            ,rdepends = Nothing
             ,execution = 0
             ,traces = flattenTraces $ addTrace (localTraces local) $ Trace BS.empty end end}
     setMem db rootId rootKey $ Ready rootRes
@@ -413,8 +413,8 @@ loadSharedCloud var opts owitness = do
 
 
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
-putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6 x7)) =
-    putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x6 <> putExN (putEx x4) <> putExN (putEx $ Depends $ Set.toList x5) <> putEx x7
+putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 _x5 x6 x7)) =
+    putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x6 <> putExN (putEx x4) <> putEx x7
 putDatabase _ (_, x) = throwImpure $ errorInternal $ "putWith, Cannot write Status with constructor " ++ statusType x
 
 
@@ -423,7 +423,5 @@ getDatabase getKey bs
     | (key, bs) <- getExN bs
     , (x1, bs) <- getExN bs
     , (x2, x3, x6, bs) <- binarySplit3 bs
-    , (x4, x57) <- getExN bs
-    , (x5, x7) <- getExN x57
-    , Depends rdeps <- getEx x5
-    = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) (Set.fromList rdeps) x6 (getEx x7)))
+    , (x4, x7) <- getExN bs
+    = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) Nothing x6 (getEx x7)))

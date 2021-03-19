@@ -37,6 +37,7 @@ import Data.List.Extra
 import Data.Either.Extra
 import System.Time.Extra
 import qualified Data.HashSet as HashSet
+import Data.IORef.Extra (atomicModifyIORef_, IORef, newIORef)
 
 
 ---------------------------------------------------------------------
@@ -145,18 +146,16 @@ updateReverseDeps myId db prev new = do
     where
         doOne f id = do
             kv <- liftIO $ getKeyValueFromId db id
-            whenJust kv $ \(k,v) ->
-                setMem db id k $ updateResult (\it -> it{rdepends = f $ rdepends it}) v
+            whenJust kv $ \(k,v) -> do
+                whenJust (getRDepsFromResult v) $ \r ->
+                    liftIO $ atomicModifyIORef_ r f
 
-        addDep :: Result a -> Result a
-        addDep it = it{rdepends = HashSet.insert myId (rdepends it)}
-
-        updateResult :: (forall a. Result a -> Result a) -> Status -> Status
-        updateResult f (Ready r) = Ready $ f r
-        updateResult f (Failed e r) = Failed e (fmap f r)
-        updateResult f (Loaded r) = Loaded $ f r
-        updateResult _ Running{} = error "Running: can this happen?"
-        updateResult _ Missing{} = error "Missing: can this happen?"
+        getRDepsFromResult :: Status -> Maybe (IORef (HashSet.HashSet Id))
+        getRDepsFromResult (Ready r) = rdepends r
+        getRDepsFromResult (Failed e r) = rdepends =<< r
+        getRDepsFromResult (Loaded r) = rdepends r
+        getRDepsFromResult Running{} = error "Running: can this happen?"
+        getRDepsFromResult Missing{} = error "Missing: can this happen?"
 
 -- | Compute the value for a given RunMode and a restore function to run
 buildRunMode :: Global -> Stack -> Database -> Id -> Maybe (Result a) -> Wait Locked RunMode
@@ -258,12 +257,13 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                     dur <- time
                     let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
                                 | otherwise = (ChangedRecomputeDiff, globalStep)
+                    rdepnds <- maybe (newIORef mempty) pure (rdepends =<< r)
                     continue $ Right $ RunResult cr runStore Result
                         {result = mkResult runValue runStore
                         ,changed = c
                         ,built = globalStep
                         ,depends = flattenDepends localDepends
-                        ,rdepends = maybe mempty rdepends r
+                        ,rdepends = Just rdepnds
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = flattenTraces localTraces}
             where
