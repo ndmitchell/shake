@@ -3,6 +3,7 @@
 
 module Development.Shake.Internal.Core.Database(
     Locked, runLocked,
+    maskLocked,
     DatabasePoly, createDatabase,
     mkId,
     getValueFromKey, getIdFromKey, getKeyValues, getKeyValueFromId, getKeyValuesFromId,
@@ -20,6 +21,7 @@ import Control.Monad.IO.Class
 import qualified General.Ids as Ids
 import Control.Monad.Fail
 import Prelude
+import Control.Exception (mask_)
 
 
 newtype Locked a = Locked (IO a)
@@ -28,6 +30,8 @@ newtype Locked a = Locked (IO a)
 runLocked :: DatabasePoly k v -> Locked b -> IO b
 runLocked db (Locked act) = withLock (lock db) act
 
+maskLocked :: Locked a -> Locked a
+maskLocked (Locked act) = Locked $ mask_ act
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
 --   Everything is mutable. intern and status must form a bijecttion.

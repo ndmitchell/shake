@@ -113,13 +113,16 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                         -- We used to be able to hit here, but we fixed it by ensuring the thread pool workers are all
                         -- dead _before_ any exception bubbles up
                         _ -> throwM $ errorInternal $ "expected Waiting but got " ++ maybe "nothing" (statusType . snd) res ++ ", key " ++ show k
-                    setIdKeyStatus global database i k $ either mkError Ready val
 
-                    -- update reverse dependencies efficiently - have they changed since last time?
-                    case result of
-                        Right RunResult{..} | runChanged `elem` [ChangedRecomputeDiff, ChangedRecomputeSame ] ->
-                            updateReverseDeps i database (depends <$> r) (depends runValue)
-                        _ -> pure ()
+                    -- Make sure that the reverse dependencies are marked to avoid unsoundness
+                    maskLocked $ do
+                        setIdKeyStatus global database i k $ either mkError Ready val
+
+                        -- update reverse dependencies efficiently - have they changed since last time?
+                        case result of
+                            Right RunResult{..} | runChanged `elem` [ChangedRecomputeDiff, ChangedRecomputeSame ] ->
+                                updateReverseDeps i database (depends <$> r) (depends runValue)
+                            _ -> pure ()
 
                     w val
                 case result of
