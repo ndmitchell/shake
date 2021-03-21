@@ -147,10 +147,10 @@ run keysChanged RunState{..} oneshot actions2 =
             addTiming "Running rules"
             locals <- newIORef []
 
-            transitiveChanges <- computeDirtySet diagnostic database keysChanged
+            updateDirtySet diagnostic database keysChanged
 
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot transitiveChanges
+                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot (isJust keysChanged)
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity
@@ -195,10 +195,10 @@ run keysChanged RunState{..} oneshot actions2 =
             putStr . unlines
         pure res
 
-{-# SCC computeDirtySet #-}
-computeDirtySet :: (IO String -> IO()) -> Database -> Maybe [SomeShakeValue] -> IO (Maybe (Set.HashSet Id))
-computeDirtySet _ _ Nothing = pure Nothing
-computeDirtySet diag database (Just keys) = do
+{-# SCC updateDirtySet #-}
+updateDirtySet :: (IO String -> IO()) -> Database -> Maybe [SomeShakeValue] -> IO ()
+updateDirtySet _ _ Nothing = pure ()
+updateDirtySet diag database (Just keys) = do
     getId <- getIdFromKey database
     let ids = mapMaybe (\(SomeShakeValue x) -> getId $ newKey x) keys
         loop x = do
@@ -219,7 +219,7 @@ computeDirtySet diag database (Just keys) = do
         keys <- unwords . map (show . fst) . catMaybes <$> mapM (getKeyValueFromId database) res
         pure $ printf "%d transitive changes computed: %s%s" st keys ellipsis
 
-    pure $ Just transitive
+    markDirty database transitive
 
 -- | Run a set of IO actions, treated as \"after\" actions, typically returned from
 --   'Development.Shake.Database.shakeRunDatabase'. The actions will be run with diagnostics

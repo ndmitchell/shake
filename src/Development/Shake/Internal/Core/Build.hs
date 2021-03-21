@@ -118,6 +118,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     -- Make sure that the reverse dependencies are marked to avoid unsoundness
                     maskLocked $ do
                         setIdKeyStatus global database i k $ either mkError Ready val
+                        liftIO $ unmarkDirty database i
 
                         -- update reverse dependencies efficiently - have they changed since last time?
                         case result of
@@ -156,20 +157,20 @@ buildRunMode :: Global -> Stack -> Database -> Id -> Maybe (Result a) -> Wait Lo
 buildRunMode global stack database i r = do
     changed <- case r of
         Nothing -> pure True
-        Just me -> buildRunDependenciesChanged global stack database i me
+        Just me -> do
+            isDirty <- liftIO $ if globalUseDirtySet global then isDirty database i else pure True
+            if isDirty
+                -- Event if I am dirty, it is still possible that all my dependencies are unchanged
+                -- thanks to early cutoff, and therefore we must check to avoid redundant work
+                then buildRunDependenciesChanged global stack database i me
+                -- If I am not dirty then none of my dependencies are, so they must be unchanged
+                else pure False
     pure $ if changed then RunDependenciesChanged else RunDependenciesSame
 
 
 -- | Have the dependencies changed
 buildRunDependenciesChanged :: Global -> Stack -> Database -> Id -> Result a -> Wait Locked Bool
-buildRunDependenciesChanged global stack database i r
-  | Just dirtySet <- globalDirtySet global
-  , not (i `HashSet.member` dirtySet)
-  -- If I am not in the dirty set then none of my dependencies are, so they must be unchanged
-  = pure False
--- If I am in the dirty set, it is still possible that all my dependencies are unchanged
-  -- thanks to early cutoff, and therefore we must check to avoid redundant work
-  | otherwise = isJust <$> firstJustM id
+buildRunDependenciesChanged global stack database i r = isJust <$> firstJustM id
     [firstJustWaitUnordered (fmap test . lookupOne global stack database) x | Depends x <- depends r]
     where
         test (Right dep) | changed dep <= built r = Nothing

@@ -458,7 +458,7 @@ data Global = Global
     ,globalCloud :: Maybe Cloud
     ,globalStep :: {-# UNPACK #-} !Step
     ,globalOneShot :: Bool -- ^ I am running in one-shot mode so don't need to store BS's for Result/Failed
-    ,globalDirtySet :: Maybe (HashSet Id)
+    ,globalUseDirtySet :: Bool -- ^ Use the dirty set approximation when running rules
     }
 
 -- local variables of Action
