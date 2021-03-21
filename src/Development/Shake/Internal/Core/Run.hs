@@ -21,6 +21,7 @@ import Data.Tuple.Extra
 import Control.Concurrent.Extra hiding (withNumCapabilities)
 import Development.Shake.Internal.Core.Database
 import Control.Monad.IO.Class
+import qualified Control.Monad.Trans.State.Strict as State
 import General.Binary
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Storage
@@ -54,14 +55,11 @@ import General.Timing
 import General.Thread
 import General.Extra
 import General.Cleanup
+import qualified General.Ids as Ids
+import Data.Foldable (traverse_)
 import Data.Monoid
 import Prelude
-import General.Ids (Id)
-import qualified Control.Monad.Trans.State.Strict as State
-import Data.Foldable (traverse_)
 import Text.Printf
-import Development.Shake.Internal.Rules.Rerun (AlwaysRerunQ(AlwaysRerunQ))
-import qualified General.Ids as Ids
 
 
 ---------------------------------------------------------------------

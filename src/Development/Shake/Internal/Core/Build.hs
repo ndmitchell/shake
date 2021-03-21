@@ -37,7 +37,6 @@ import Data.List.Extra
 import Data.Either.Extra
 import System.Time.Extra
 import qualified Data.HashSet as HashSet
-import Data.IORef.Extra (atomicModifyIORef_, IORef, newIORef)
 
 
 ---------------------------------------------------------------------

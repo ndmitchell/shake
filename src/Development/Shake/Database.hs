@@ -32,8 +32,11 @@ module Development.Shake.Database(
 import Control.Concurrent.Extra
 import Control.Exception
 import Control.Monad
+import Control.Monad.Extra (whenJust)
 import Control.Monad.IO.Class
+import qualified Data.HashSet as HashSet
 import Data.IORef
+import Data.Maybe
 import General.Cleanup
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Options
@@ -41,11 +44,8 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Rules.Default
-import Development.Shake.Internal.Value (ShakeValue, SomeShakeValue(..), newKey)
-import Data.Maybe (isJust, mapMaybe, fromMaybe)
+import Development.Shake.Internal.Value (SomeShakeValue(..), newKey)
 import Development.Shake.Internal.Core.Database (markDirty, getIdFromKey)
-import Control.Monad.Extra (whenJust)
-import qualified Data.HashSet as HashSet
 
 
 data UseState

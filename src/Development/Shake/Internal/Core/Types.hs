@@ -50,7 +50,6 @@ import Data.Semigroup
 import General.Cleanup
 import Control.Monad.Fail
 import Prelude
-import Data.HashSet (HashSet)
 
 
 ---------------------------------------------------------------------
