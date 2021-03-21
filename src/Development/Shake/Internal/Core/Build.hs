@@ -135,13 +135,12 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
 
 
 
--- | Refresh all the reverse dependencies
---   Assumes that none of them is running
+-- | Refresh all the reverse dependencies of an id
 {-# SCC updateReverseDeps #-}
 updateReverseDeps :: Id -> Database -> Maybe [Depends] -> [Depends] -> Locked ()
 updateReverseDeps myId db prev new = do
     let added = foldMap fromDepends new
-        deleted = [] -- Does not have an efficient impl. so we overestimate for now
+        deleted = [] -- an efficient impl. is expensive in space, so we overestimate for now
     forM_ added   $ doOne (HashSet.insert myId)
     forM_ deleted $ doOne (HashSet.delete myId)
     where
