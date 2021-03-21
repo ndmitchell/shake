@@ -3,8 +3,10 @@
 {-# LANGUAGE ConstraintKinds, TupleSections, ViewPatterns #-}
 {-# LANGUAGE TypeFamilies, NamedFieldPuns #-}
 
+{-# LANGUAGE RankNTypes #-}
 module Development.Shake.Internal.Core.Run(
     RunState,
+    database,
     open,
     reset,
     run,
@@ -105,8 +107,13 @@ reset RunState{..} = runLocked database $
         f x = x
 
 
-run :: Maybe [SomeShakeValue] -> RunState -> Bool -> [Action ()] -> IO [IO ()]
-run keysChanged RunState{..} oneshot actions2 =
+run
+    :: RunState
+    -> Bool     -- ^ oneshot
+    -> Bool     -- ^ use dirty set
+    -> [Action ()]
+    -> IO [IO ()]
+run RunState{..} oneshot useDirtySet actions2 =
     withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
 
         -- timings are a bit delicate, we want to make sure we clear them before we leave (so each run is fresh)
@@ -147,10 +154,10 @@ run keysChanged RunState{..} oneshot actions2 =
             addTiming "Running rules"
             locals <- newIORef []
 
-            updateDirtySet diagnostic database keysChanged
+            when useDirtySet $ updateDirtySet diagnostic database
 
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot (isJust keysChanged)
+                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot useDirtySet
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity
@@ -166,7 +173,7 @@ run keysChanged RunState{..} oneshot actions2 =
             end <- start
             if null actions && null actions2 then
                 putWhen Info "Warning: No want/action statements, nothing to do"
-             else
+            else
                 recordRoot step locals end database
 
             when (isJust shakeLint) $ do
@@ -195,13 +202,11 @@ run keysChanged RunState{..} oneshot actions2 =
             putStr . unlines
         pure res
 
+-- | Transitively expand the dirty set
 {-# SCC updateDirtySet #-}
-updateDirtySet :: (IO String -> IO()) -> Database -> Maybe [SomeShakeValue] -> IO ()
-updateDirtySet _ _ Nothing = pure ()
-updateDirtySet diag database (Just keys) = do
-    getId <- getIdFromKey database
-    let ids = mapMaybe (\(SomeShakeValue x) -> getId $ newKey x) keys
-        loop x = do
+updateDirtySet :: (IO String -> IO()) -> Database -> IO ()
+updateDirtySet diag database = do
+    let loop x = do
             seen <- State.get
             if x `Set.member` seen then pure () else do
                 Just (_, status) <- liftIO $ getKeyValueFromId database x
@@ -209,14 +214,12 @@ updateDirtySet diag database (Just keys) = do
                         State.put (Set.insert x seen)
                         next <- liftIO $ maybe (pure mempty) readIORef $ rdepends r
                         traverse_ loop next
+    ids <- getDirtySet database
     transitive <- flip State.execStateT Set.empty $ traverse_ loop ids
 
     markDirty database transitive
 
-    diag $
-        if null ids && not (null keys)
-        then pure "Could not compute transitive changes for unknown keys"
-        else do
+    diag $ do
         dirtySet <- getDirtySet database
         let st = Set.size dirtySet
             res = take 500 $ Set.toList dirtySet

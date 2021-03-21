@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -40,7 +41,11 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Rules.Default
-import Development.Shake.Internal.Value (ShakeValue, SomeShakeValue(..))
+import Development.Shake.Internal.Value (ShakeValue, SomeShakeValue(..), newKey)
+import Data.Maybe (isJust, mapMaybe, fromMaybe)
+import Development.Shake.Internal.Core.Database (markDirty, getIdFromKey)
+import Control.Monad.Extra (whenJust)
+import qualified Data.HashSet as HashSet
 
 
 data UseState
@@ -156,17 +161,25 @@ shakeRunDatabaseForKeys
     -> ShakeDatabase
     -> [Action a]
     -> IO ([a], [IO ()])
-shakeRunDatabaseForKeys keysChanged (ShakeDatabase use s) as =
+shakeRunDatabaseForKeys keysChanged (ShakeDatabase use s) as = uninterruptibleMask $ \continue ->
     withOpen use "shakeRunDatabase" (\o -> o{openRequiresReset=True}) $ \Open{..} -> do
         when openRequiresReset $ do
             when openOneShot $
                 throwM $ errorStructured "Error when calling shakeRunDatabase twice, after calling shakeOneShotDatabase" [] ""
             reset s
-        (refs, as) <- fmap unzip $ forM as $ \a -> do
-            ref <- newIORef Nothing
-            pure (ref, liftIO . writeIORef ref . Just =<< a)
-        after <- run keysChanged s openOneShot $ map void as
-        results <- mapM readIORef refs
-        case sequence results of
-            Just result -> pure (result, after)
-            Nothing -> throwM $ errorInternal "Expected all results were written, but some where not"
+
+        -- record the keys changed and continue
+        whenJust keysChanged $ \kk -> do
+            getId <- getIdFromKey (database s)
+            let ids = mapMaybe (\(SomeShakeValue x) -> getId $ newKey x) kk
+            markDirty (database s) $ HashSet.fromList ids
+
+        continue $ do
+            (refs, as) <- fmap unzip $ forM as $ \a -> do
+                ref <- newIORef Nothing
+                pure (ref, liftIO . writeIORef ref . Just =<< a)
+            after <- run s openOneShot (isJust keysChanged) $ map void as
+            results <- mapM readIORef refs
+            case sequence results of
+                Just result -> pure (result, after)
+                Nothing -> throwM $ errorInternal "Expected all results were written, but some where not"
