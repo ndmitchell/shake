@@ -204,10 +204,11 @@ computeDirtySet diag database (Just keys) = do
         loop x = do
             seen <- State.get
             if x `Set.member` seen then pure () else do
-                Just (_, Loaded result) <- liftIO $ getKeyValueFromId database x
-                State.put (Set.insert x seen)
-                next <- liftIO $ maybe (pure mempty) readIORef $ rdepends result
-                traverse_ loop next
+                Just (_, status) <- liftIO $ getKeyValueFromId database x
+                whenJust (getResult status) $ \r -> do
+                        State.put (Set.insert x seen)
+                        next <- liftIO $ maybe (pure mempty) readIORef $ rdepends r
+                        traverse_ loop next
     transitive <- flip State.execStateT Set.empty $ traverse_ loop ids
 
     diag $

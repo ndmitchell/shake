@@ -147,15 +147,9 @@ updateReverseDeps myId db prev new = do
         doOne f id = do
             kv <- liftIO $ getKeyValueFromId db id
             whenJust kv $ \(k,v) -> do
-                whenJust (getRDepsFromResult v) $ \r ->
-                    liftIO $ atomicModifyIORef_ r f
-
-        getRDepsFromResult :: Status -> Maybe (IORef (HashSet.HashSet Id))
-        getRDepsFromResult (Ready r) = rdepends r
-        getRDepsFromResult (Failed e r) = rdepends =<< r
-        getRDepsFromResult (Loaded r) = rdepends r
-        getRDepsFromResult Running{} = error "Running: can this happen?"
-        getRDepsFromResult Missing{} = error "Missing: can this happen?"
+                whenJust (getResult v) $ \r ->
+                    whenJust (rdepends r) $ \ref ->
+                    liftIO $ atomicModifyIORef_ ref f
 
 -- | Compute the value for a given RunMode and a restore function to run
 buildRunMode :: Global -> Stack -> Database -> Id -> Maybe (Result a) -> Wait Locked RunMode
