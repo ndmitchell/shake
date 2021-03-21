@@ -211,15 +211,19 @@ updateDirtySet diag database (Just keys) = do
                         traverse_ loop next
     transitive <- flip State.execStateT Set.empty $ traverse_ loop ids
 
-    diag $
-        if null ids then pure "Could not compute transitive changes for unknown keys" else do
-        let st = Set.size transitive
-            res = take 100 $ Set.toList transitive
-            ellipsis = if st > 100 then "..." else ""
-        keys <- unwords . map (show . fst) . catMaybes <$> mapM (getKeyValueFromId database) res
-        pure $ printf "%d transitive changes computed: %s%s" st keys ellipsis
-
     markDirty database transitive
+
+    diag $
+        if null ids && not (null keys)
+        then pure "Could not compute transitive changes for unknown keys"
+        else do
+        dirtySet <- getDirtySet database
+        let st = Set.size dirtySet
+            res = take 500 $ Set.toList dirtySet
+            ellipsis = if st > 500 then "..." else ""
+        keys <- unlines . map (show . fst) . catMaybes <$> mapM (getKeyValueFromId database) res
+        pure $ printf "%d dirty set: \n%s\n%s" st keys ellipsis
+
 
 -- | Run a set of IO actions, treated as \"after\" actions, typically returned from
 --   'Development.Shake.Database.shakeRunDatabase'. The actions will be run with diagnostics
