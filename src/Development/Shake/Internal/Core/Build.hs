@@ -145,11 +145,8 @@ updateReverseDeps myId db prev new = do
     forM_ deleted $ doOne (HashSet.delete myId)
     where
         doOne f id = do
-            kv <- liftIO $ getKeyValueFromId db id
-            whenJust kv $ \(k,v) -> do
-                whenJust (getResult v) $ \r ->
-                    whenJust (rdepends r) $ \ref ->
-                    liftIO $ atomicModifyIORef_ ref f
+            rdeps <- liftIO $ getReverseDependencies db id
+            setReverseDependencies db id (f $ fromMaybe mempty rdeps)
 
 -- | Compute the value for a given RunMode and a restore function to run
 buildRunMode :: Global -> Stack -> Database -> Id -> Maybe (Result a) -> Wait Locked RunMode
@@ -251,13 +248,11 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                     dur <- time
                     let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
                                 | otherwise = (ChangedRecomputeDiff, globalStep)
-                    rdepnds <- maybe (newIORef mempty) pure (rdepends =<< r)
                     continue $ Right $ RunResult cr runStore Result
                         {result = mkResult runValue runStore
                         ,changed = c
                         ,built = globalStep
                         ,depends = flattenDepends localDepends
-                        ,rdepends = Just rdepnds
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = flattenTraces localTraces}
             where

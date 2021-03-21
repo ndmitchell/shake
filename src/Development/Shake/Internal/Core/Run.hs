@@ -61,6 +61,7 @@ import qualified Control.Monad.Trans.State.Strict as State
 import Data.Foldable (traverse_)
 import Text.Printf
 import Development.Shake.Internal.Rules.Rerun (AlwaysRerunQ(AlwaysRerunQ))
+import qualified General.Ids as Ids
 
 
 ---------------------------------------------------------------------
@@ -209,11 +210,9 @@ updateDirtySet diag database = do
     let loop x = do
             seen <- State.get
             if x `Set.member` seen then pure () else do
-                Just (_, status) <- liftIO $ getKeyValueFromId database x
-                whenJust (getResult status) $ \r -> do
-                        State.put (Set.insert x seen)
-                        next <- liftIO $ maybe (pure mempty) readIORef $ rdepends r
-                        traverse_ loop next
+                State.put (Set.insert x seen)
+                next <- liftIO $ getReverseDependencies database x
+                traverse_ loop (fromMaybe mempty next)
     ids <- getDirtySet database
     transitive <- flip State.execStateT Set.empty $ traverse_ loop ids
 
@@ -363,8 +362,9 @@ usingDatabase cleanup opts diagnostic owitness = do
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
         | (t,(version, BinaryOp{..})) <- step : root : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
     (status, journal) <- usingStorage cleanup opts diagnostic witness
+    rdeps <- Ids.empty
     journal<- pure $ \i k v -> journal (QTypeRep $ typeKey k) i (k, v)
-    createDatabase status journal Missing
+    createDatabase status rdeps journal Missing
 
 
 incrementStep :: Database -> IO Step
@@ -380,7 +380,7 @@ incrementStep db = runLocked db $ do
     pure step
 
 toStepResult :: Step -> Result (Value, BS_Store)
-toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] Nothing 0 []
+toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] 0 []
 
 fromStepResult :: Result BS_Store -> Step
 fromStepResult = getEx . result
@@ -395,7 +395,6 @@ recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
             ,changed = step
             ,built = step
             ,depends = flattenDepends $ localDepends local
-            ,rdepends = Nothing
             ,execution = 0
             ,traces = flattenTraces $ addTrace (localTraces local) $ Trace BS.empty end end}
     setMem db rootId rootKey $ Ready rootRes
@@ -421,7 +420,7 @@ loadSharedCloud var opts owitness = do
 
 
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
-putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 _x5 x6 x7)) =
+putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x6 x7)) =
     putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x6 <> putExN (putEx x4) <> putEx x7
 putDatabase _ (_, x) = throwImpure $ errorInternal $ "putWith, Cannot write Status with constructor " ++ statusType x
 
@@ -432,4 +431,4 @@ getDatabase getKey bs
     , (x1, bs) <- getExN bs
     , (x2, x3, x6, bs) <- binarySplit3 bs
     , (x4, x7) <- getExN bs
-    = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) Nothing x6 (getEx x7)))
+    = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) x6 (getEx x7)))

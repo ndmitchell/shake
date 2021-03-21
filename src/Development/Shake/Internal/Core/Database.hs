@@ -8,7 +8,8 @@ module Development.Shake.Internal.Core.Database(
     mkId,
     getValueFromKey, getIdFromKey, getKeyValues, getKeyValueFromId, getKeyValuesFromId,
     setMem, setDisk, modifyAllMem,
-    isDirty, getDirtySet, markDirty, unmarkDirty
+    isDirty, getDirtySet, markDirty, unmarkDirty,
+    getReverseDependencies, setReverseDependencies
     ) where
 
 import Data.Tuple.Extra
@@ -44,6 +45,7 @@ data DatabasePoly k v = Database
     {lock :: Lock
     ,intern :: IORef (Intern k) -- ^ Key |-> Id mapping
     ,status :: Ids.Ids (k, v) -- ^ Id |-> (Key, Status) mapping
+    ,rdeps  :: Ids.Ids (HashSet Id) -- ^ Id |-> reverse dependencies
     ,journal :: Id -> k -> v -> IO () -- ^ Record all changes to status
     ,vDefault :: v
     ,dirty :: IORef (HashSet Id)
@@ -54,10 +56,11 @@ data DatabasePoly k v = Database
 createDatabase
     :: (Eq k, Hashable k)
     => Ids.Ids (k, v)
+    -> Ids.Ids (HashSet Id)
     -> (Id -> k -> v -> IO ())
     -> v
     -> IO (DatabasePoly k v)
-createDatabase status journal vDefault = do
+createDatabase status rdeps journal vDefault = do
     xs <- Ids.toList status
     intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
     lock <- newLock
@@ -96,6 +99,9 @@ isDirty Database{..} i = HSet.member i <$> readIORef dirty
 getDirtySet :: DatabasePoly k v -> IO (HashSet Id)
 getDirtySet Database{..} = readIORef dirty
 
+getReverseDependencies :: DatabasePoly k v -> Id -> IO (Maybe (HashSet Id))
+getReverseDependencies Database{..} = Ids.lookup rdeps
+
 ---------------------------------------------------------------------
 -- MUTATING
 
@@ -115,6 +121,9 @@ mkId Database{..} k = liftIO $ do
 
 setMem :: DatabasePoly k v -> Id -> k -> v -> Locked ()
 setMem Database{..} i k v = liftIO $ Ids.insert status i (k,v)
+
+setReverseDependencies :: DatabasePoly k v -> Id -> HashSet Id -> Locked ()
+setReverseDependencies Database{..} = (liftIO.) . Ids.insert rdeps
 
 modifyAllMem :: DatabasePoly k v -> (v -> v) -> Locked ()
 modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ \(k,v) ->
