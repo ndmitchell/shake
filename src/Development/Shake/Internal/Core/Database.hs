@@ -25,7 +25,6 @@ import Prelude
 import Control.Exception (mask_)
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HSet
-import Data.List (foldl')
 
 
 newtype Locked a = Locked (IO a)
