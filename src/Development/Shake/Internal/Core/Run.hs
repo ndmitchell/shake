@@ -202,9 +202,8 @@ run RunState{..} oneshot useDirtySet actions2 =
         pure res
 
 -- | Transitively expand the dirty set
-{-# SCC updateDirtySet #-}
 updateDirtySet :: (IO String -> IO()) -> Database -> IO ()
-updateDirtySet diag database = do
+updateDirtySet diag database = {-# SCC updateDirtySet #-} do
     let loop x = do
             seen <- State.get
             if x `Set.member` seen then pure () else do
