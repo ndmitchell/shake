@@ -148,6 +148,8 @@ shakeRunDatabase = shakeRunDatabaseForKeys Nothing
 -- | Given an open 'ShakeDatabase', run both whatever actions were added to the 'Rules',
 --   plus the list of 'Action' given here.
 --
+--   Requires 'shakeReverseDependencies', otherwise it falls back to 'shakeRunDatabase'.
+--
 --   If a set of dirty keys is given, only the reverse dependencies of these keys
 --   will be considered potentially changed; all other keys will be assumed unchanged.
 --   This includes the 'AlwaysRerunQ' key which is by default always dirty, but

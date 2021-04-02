@@ -153,10 +153,11 @@ run RunState{..} oneshot useDirtySet actions2 =
             addTiming "Running rules"
             locals <- newIORef []
 
-            when useDirtySet $ updateDirtySet diagnostic database
+            let reallyUseDirtySet = useDirtySet && shakeReverseDependencies
+            when reallyUseDirtySet $ updateDirtySet diagnostic database
 
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot useDirtySet
+                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot reallyUseDirtySet
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity

@@ -121,7 +121,9 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
 
                         -- update reverse dependencies efficiently - have they changed since last time?
                         case result of
-                            Right RunResult{..} | runChanged `elem` [ChangedRecomputeDiff, ChangedRecomputeSame ] ->
+                            Right RunResult{..}
+                             | shakeReverseDependencies globalOptions &&
+                                runChanged `elem` [ChangedRecomputeDiff, ChangedRecomputeSame ] ->
                                 updateReverseDeps i database (depends <$> r) (depends runValue)
                             _ -> pure ()
 
