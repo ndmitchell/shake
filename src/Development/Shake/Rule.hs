@@ -21,6 +21,8 @@ module Development.Shake.Rule(
     -- * Calling builtin rules
     -- | Wrappers around calling Shake rules. In general these should be specialised to a builtin rule.
     apply, apply1,
+    -- * Applicative parallel rule evaluation
+    Apply, apply', applyConcurrently,
     -- * User rules
     -- | Define user rules that can be used by builtin rules.
     --   Absent any builtin rule making use of a user rule at a given type, a user rule will have on effect -

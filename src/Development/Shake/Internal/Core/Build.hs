@@ -7,6 +7,7 @@ module Development.Shake.Internal.Core.Build(
     historyIsEnabled, historySave, historyLoad,
     applyKeyValue,
     apply, apply1,
+    Apply, apply', applyConcurrently
     ) where
 
 import Development.Shake.Classes
@@ -243,7 +244,40 @@ apply ks =
 apply1 :: (Partial, RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
 apply1 = withFrozenCallStack $ fmap head . apply . pure
 
+---------------------------------------------------------------------
+-- Applicative for heterogenenous apply
 
+-- | A computation involving Shake rules.
+--   Evaluate rules with 'apply'' and compose using the 'Applicative' instance.
+data Apply a where
+    Done :: a -> Apply a
+    More :: Key -> (Value -> Action a) -> Apply (a -> b) -> Apply b
+
+instance Functor Apply where
+    fmap f (Done x) = Done (f x)
+    fmap f (More k unwrap rest) = More k unwrap (fmap (f.) rest)
+
+instance Applicative Apply where
+    pure = Done
+    Done f <*> a = f <$> a
+    More k unwrap rest <*> a = More k unwrap (flip <$> rest <*> a)
+
+-- | Execute all the rules in the composition in parallel and then assemble the result.
+applyConcurrently :: Apply a -> Action a
+applyConcurrently it = helper it =<< Action (stepRAW (callStackFull, keys it))
+  where
+      keys :: Apply a -> [Key]
+      keys Done{} = []
+      keys (More k _ rest) = k : keys rest
+
+      helper :: Apply b -> [Value] -> Action b
+      helper (Done x) [] = pure x
+      helper (More _ unwrap combine) (v:rest) =
+          helper combine rest <*> unwrap v
+
+-- | Apply a single rule
+apply' :: (ShakeValue key, RuleResult key ~ value, Typeable value) => key -> Apply value
+apply' key = More (newKey key) (pure . fromValue) (Done id)
 
 ---------------------------------------------------------------------
 -- HISTORY STUFF
