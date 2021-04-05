@@ -477,6 +477,9 @@ unsafeExtraThread act = do
 
 
 -- | Execute a list of actions in parallel. In most cases 'need' will be more appropriate to benefit from parallelism.
+--   If the two types of 'Action' are different dependencies which ultimately boil down to 'apply',
+--   using 'Applicative' operations will still ensure the dependencies occur in parallel.
+--   The main use of this function is to run work that happens in an 'Action' in parallel.
 parallel :: [Action a] -> Action [a]
 -- Note: There is no parallel_ unlike sequence_ because there is no stack benefit to doing so
 parallel [] = pure []

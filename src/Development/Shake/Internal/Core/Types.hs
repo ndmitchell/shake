@@ -58,6 +58,10 @@ import Prelude
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'Development.Shake.need' to execute files.
 --   Action values are used by 'addUserRule' and 'action'. The 'Action' monad tracks the dependencies of a rule.
 --   To raise an exception call 'error', 'fail' or @'liftIO' . 'throwIO'@.
+--
+--   The 'Action' type is both a 'Monad' and 'Applicative'. Anything that is depended upon applicatively
+--   will have its dependencies run in parallel. For example @'need' [\"a\"] *> 'need [\"b\"]@ is equivalent
+--   to @'need' [\"a\", \"b\"]@.
 newtype Action a = Action {fromAction :: RAW ([String],[Key]) [Value] Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO, Typeable, Semigroup, Monoid, MonadFail)
 
