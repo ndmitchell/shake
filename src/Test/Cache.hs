@@ -64,7 +64,7 @@ test build = do
 
     writeFile "bug796.1" "a"
     writeFile "bug796.2" "b"
-    build ["bug796"]
+    build ["bug796", "--sleep"]
     assertContents "bug796" "ab"
     writeFile "bug796.1" "A"
     build ["bug796", "--sleep"]
