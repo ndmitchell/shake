@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #796, fix a bug with newCache dependencies
     #798, optimise dependency checking
 0.19.4, released 2021-01-14
     #790, add option shakeAllowRedefineRules

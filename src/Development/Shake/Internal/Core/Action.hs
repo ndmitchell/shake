@@ -455,7 +455,7 @@ newCacheIO (act :: k -> Action v) = do
                             Action $ throwRAW err
                         Right v -> do
                             Local{localDepends=deps} <- Action getRW
-                            Action $ modifyRW $ \s -> s{localDepends = addDepends (localDepends s) pre}
+                            Action $ modifyRW $ \s -> s{localDepends = addDepends pre deps}
                             liftIO $ signalFence bar $ Right (deps, v)
                             pure v
 

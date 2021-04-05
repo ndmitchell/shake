@@ -24,6 +24,14 @@ main = testBuild test $ do
         startCompiler ()
         liftIO $ copyFile "compiler.txt" out
 
+    -- Bug fixed in https://github.com/ndmitchell/shake/pull/796
+    bug796_2 <- newCache $ \() -> do
+        readFile' "bug796.2"
+    "bug796" %> \out -> do
+        a <- readFile' "bug796.1"
+        b <- bug796_2 ()
+        writeFile' out $ a ++ b
+
 
 test build = do
     build ["clean"]
@@ -53,3 +61,14 @@ test build = do
     writeFile "compiler.txt" "unstarted"
     build ["foo.lang","bar.lang"]
     assertContents "compiler.txt" "unstarted"
+
+    writeFile "bug796.1" "a"
+    writeFile "bug796.2" "b"
+    build ["bug796"]
+    assertContents "bug796" "ab"
+    writeFile "bug796.1" "A"
+    build ["bug796"]
+    assertContents "bug796" "Ab"
+    writeFile "bug796.2" "B"
+    build ["bug796"]
+    assertContents "bug796" "AB"
