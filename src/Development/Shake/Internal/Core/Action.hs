@@ -395,8 +395,14 @@ lookupDependencies db k = do
     pure $ depends r
 
 
--- | This rule should not be cached or recorded in the history because it makes use of untracked dependencies
---   (e.g. files in a system directory or items on the @$PATH@), or is trivial to compute locally.
+-- | This rule should not be saved to shared/cloud storage via 'shakeShare'.
+--   There are usually two reasons to call this function:
+--
+--   1. It makes use of untracked dependencies that are specific to this machine,
+--      e.g. files in a system directory or items on the @$PATH@.
+--   2. The rule is trivial to compute locally, so there is no point sharing it.
+--
+--   If you want the rule to not be cached at all, use 'alwaysRerun'.
 historyDisable :: Action ()
 historyDisable = Action $ modifyRW $ \s -> s{localHistory = False}
 
