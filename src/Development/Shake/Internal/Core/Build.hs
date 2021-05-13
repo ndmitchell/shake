@@ -7,6 +7,7 @@ module Development.Shake.Internal.Core.Build(
     historyIsEnabled, historySave, historyLoad,
     applyKeyValue,
     apply, apply1,
+    alwaysRerun
     ) where
 
 import Development.Shake.Classes
@@ -19,6 +20,7 @@ import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
 import Development.Shake.Internal.Options
+import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Internal.Core.Monad
 import General.Wait
 import qualified Data.ByteString.Char8 as BS
@@ -37,6 +39,7 @@ import Data.List.Extra
 import Data.Either.Extra
 import System.Time.Extra
 import qualified Data.HashSet as HashSet
+import Data.Functor ((<&>))
 
 
 ---------------------------------------------------------------------
@@ -160,7 +163,13 @@ buildRunMode global stack database i r = do
                 -- thanks to early cutoff, and therefore we must check to avoid redundant work
                 then buildRunDependenciesChanged global stack database i me
                 -- If I am not dirty then none of my dependencies are, so they must be unchanged
-                else pure False
+                else do
+                    -- The only exception is rules with a direct dependency on alwaysRerun
+                    lookup <- liftIO $ getIdFromKey database
+                    let alwaysRerunId = lookup $ newKey $ AlwaysRerunQ ()
+                    pure $ case alwaysRerunId of
+                        Nothing -> False
+                        Just id -> any (\(Depends x) -> id `elem` x) (depends me)
     pure $ if changed then RunDependenciesChanged else RunDependenciesSame
 
 
@@ -375,3 +384,25 @@ runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> Maybe BS.ByteS
 runIdentify mp k v
     | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
     | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
+
+-------------------------------------------------------------------------------
+-- SPECIAL RULES
+
+-- | Always rerun the associated action. Useful for defining rules that query
+--   the environment. For example:
+--
+-- @
+-- \"ghcVersion.txt\" 'Development.Shake.%>' \\out -> do
+--     'alwaysRerun'
+--     'Development.Shake.Stdout' stdout <- 'Development.Shake.cmd' \"ghc --numeric-version\"
+--     'Development.Shake.writeFileChanged' out stdout
+-- @
+--
+--   In @make@, the @.PHONY@ attribute on file-producing rules has a similar effect.
+--
+--   Note that 'alwaysRerun' is applied when a rule is executed. Modifying an existing rule
+--   to insert 'alwaysRerun' will /not/ cause that rule to rerun next time.
+alwaysRerun :: Action ()
+alwaysRerun = do
+    historyDisable
+    apply1 $ AlwaysRerunQ ()

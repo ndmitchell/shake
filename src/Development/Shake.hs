@@ -123,6 +123,7 @@ import Development.Shake.Internal.Value
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
+import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Resource
 import Development.Shake.Internal.Derived
