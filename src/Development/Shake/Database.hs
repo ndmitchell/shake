@@ -45,7 +45,7 @@ import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Rules.Default
 import Development.Shake.Internal.Value (SomeShakeValue(..), newKey)
-import Development.Shake.Internal.Core.Database (markDirty, getIdFromKey)
+import Development.Shake.Internal.Core.Database (flushDirty, markDirty, getIdFromKey, runLocked)
 
 
 data UseState
@@ -169,6 +169,7 @@ shakeRunDatabaseForKeys keysChanged (ShakeDatabase use s) as = uninterruptibleMa
             when openOneShot $
                 throwM $ errorStructured "Error when calling shakeRunDatabase twice, after calling shakeOneShotDatabase" [] ""
             reset s
+            runLocked (database s) $ flushDirty (database s)
 
         -- record the keys changed and continue
         whenJust keysChanged $ \kk -> do

@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards #-}
 
+{-# LANGUAGE TupleSections #-}
 module Development.Shake.Internal.Core.Database(
     Locked, runLocked,
     maskLocked,
@@ -8,7 +9,7 @@ module Development.Shake.Internal.Core.Database(
     mkId,
     getValueFromKey, getIdFromKey, getKeyValues, getKeyValueFromId, getKeyValuesFromId,
     setMem, setDisk, modifyAllMem,
-    isDirty, getDirtySet, markDirty, unmarkDirty,
+    isDirty, getDirtySet, markDirty, unmarkDirty, flushDirty,
     getReverseDependencies, setReverseDependencies
     ) where
 
@@ -48,7 +49,7 @@ data DatabasePoly k v = Database
     ,rdeps  :: Ids.Ids (HashSet Id) -- ^ Id |-> reverse dependencies
     ,journal :: Id -> k -> v -> IO () -- ^ Record all changes to status
     ,vDefault :: v
-    ,dirty :: IORef (HashSet Id)
+    ,clean,dirty :: IORef (HashSet Id)
     -- ^ An approximation of the dirty set across runs of 'shakeRunDatabaseForKeys'
     }
 
@@ -65,6 +66,7 @@ createDatabase status rdeps journal vDefault = do
     intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
     lock <- newLock
     dirty <- newIORef mempty
+    clean <- newIORef mempty
     pure Database{..}
 
 
@@ -138,4 +140,9 @@ markDirty Database{..} ids = atomicModifyIORef'_ dirty $ HSet.union ids
 
 unmarkDirty :: DatabasePoly k v -> Id -> IO ()
 unmarkDirty Database{..} i = do
-    atomicModifyIORef'_ dirty (HSet.delete i)
+    atomicModifyIORef'_ clean (HSet.insert i)
+
+flushDirty :: DatabasePoly k v -> Locked ()
+flushDirty Database{..} = liftIO $ do
+    cleanIds <- atomicModifyIORef' clean (mempty,)
+    atomicModifyIORef'_ dirty (`HSet.difference` cleanIds)

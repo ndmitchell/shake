@@ -172,11 +172,22 @@ buildRunMode global stack database i r = do
                         Just id -> any (\(Depends x) -> id `elem` x) (depends me)
     pure $ if changed then RunDependenciesChanged else RunDependenciesSame
 
+isDirtyOrAlwaysRerun :: MonadIO m => DatabasePoly Key v -> m (Id -> Bool)
+isDirtyOrAlwaysRerun database = do
+    lookup <- liftIO $ getIdFromKey database
+    dirtySet <- liftIO $ getDirtySet database
+    let alwaysRerunId = lookup $ newKey $ AlwaysRerunQ ()
+    pure $ \id -> Just id == alwaysRerunId || id `HashSet.member` dirtySet
 
 -- | Have the dependencies changed
 buildRunDependenciesChanged :: Global -> Stack -> Database -> Id -> Result a -> Wait Locked Bool
-buildRunDependenciesChanged global stack database i r = isJust <$> firstJustM id
-    [firstJustWaitUnordered (fmap test . lookupOne global stack database) x | Depends x <- depends r]
+buildRunDependenciesChanged global stack database i r = do
+    isDirty <- isDirtyOrAlwaysRerun database
+    isJust <$> firstJustM id
+        [firstJustWaitUnordered (fmap test . lookupOne global stack database) x'
+        | Depends x <- depends r
+        , let x' = if globalUseDirtySet global then filter isDirty x else x
+        ]
     where
         test (Right dep) | changed dep <= built r = Nothing
         test _ = Just ()
