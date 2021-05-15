@@ -29,7 +29,6 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.FileName
-import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Classes
 import Development.Shake.FilePath(toStandard)
 import Development.Shake.Internal.FilePattern

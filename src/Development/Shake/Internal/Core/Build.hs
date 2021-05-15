@@ -32,14 +32,13 @@ import Control.Exception
 import Control.Monad.Extra
 import Numeric.Extra
 import qualified Data.HashMap.Strict as Map
+import qualified Data.HashSet as HashSet
 import Development.Shake.Internal.Core.Rules
 import Data.Typeable
 import Data.Maybe
 import Data.List.Extra
 import Data.Either.Extra
 import System.Time.Extra
-import qualified Data.HashSet as HashSet
-import Data.Functor ((<&>))
 
 
 ---------------------------------------------------------------------

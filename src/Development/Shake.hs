@@ -138,7 +138,6 @@ import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Rules.Files
 import Development.Shake.Internal.Rules.Oracle
 import Development.Shake.Internal.Rules.OrderOnly
-import Development.Shake.Internal.Rules.Rerun
 
 -- $writing
 --
