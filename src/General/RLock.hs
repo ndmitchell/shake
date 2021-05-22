@@ -12,36 +12,28 @@ import Control.Exception
 newtype RLock = RLock {_rlock :: TVar State}
 
 data State
-  = Locked !ThreadId !Int
+  = Locked !ThreadId
   | Unlocked
 
 new :: IO RLock
 new = RLock <$> newTVarIO Unlocked
 
-acquire :: RLock -> IO ()
+acquire :: RLock -> IO Bool
 acquire (RLock tv) = do
   tid <- myThreadId
   atomically $ do
     readTVar tv >>= \case
-      Locked tid' n
+      Locked tid'
         | tid == tid' ->
-            writeTVar tv $! Locked tid' (n+1)
+            return False
         | otherwise -> retry
-      Unlocked ->
-          writeTVar tv $! Locked tid 1
+      Unlocked -> do
+          writeTVar tv $! Locked tid
+          return True
 
-release :: RLock -> IO ()
-release (RLock tv) = do
-  tid <- myThreadId
-  atomically $ do
-    readTVar tv >>= \case
-      Locked tid' n
-        | tid == tid' ->
-          writeTVar tv $! if n == 1 then Unlocked else Locked tid (n-1)
-        | otherwise ->
-          error "This thread does not hold the lock"
-      Unlocked ->
-        error "The lock is not held"
+release :: RLock -> Bool -> IO ()
+release (RLock tv) True  = atomically $ writeTVar tv Unlocked
+release _          False = return ()
 
 with :: RLock -> IO a -> IO a
-with = liftA2 bracket_ acquire release
+with rl act = bracket (acquire rl) (release rl) (const act)
