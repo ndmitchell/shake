@@ -12,7 +12,7 @@ data CmdOption
     | AddEnv String String -- ^ Add an environment variable in the child process.
     | RemEnv String -- ^ Remove an environment variable from the child process.
     | AddPath [String] [String] -- ^ Add some items to the prefix and suffix of the @$PATH@ variable.
-    | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default the @stdin@ is inherited.
+    | Stdin String -- ^ Given as the @stdin@ of the spawned process.
     | StdinBS LBS.ByteString -- ^ Given as the @stdin@ of the spawned process.
     | FileStdin FilePath -- ^ Take the @stdin@ from a file.
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
