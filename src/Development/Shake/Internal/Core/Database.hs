@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards #-}
 
 module Development.Shake.Internal.Core.Database(
@@ -101,7 +102,9 @@ setMem :: DatabasePoly k v -> Id -> k -> v -> Locked ()
 setMem Database{..} i k v = liftIO $ Ids.insert status i (k,v)
 
 modifyAllMem :: DatabasePoly k v -> (v -> v) -> Locked ()
-modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ second f
+modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ \(k,v) ->
+    let !v' = f v
+    in (k, v')
 
 setDisk :: DatabasePoly k v -> Id -> k -> v -> IO ()
 setDisk = journal
