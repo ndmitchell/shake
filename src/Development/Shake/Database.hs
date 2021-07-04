@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -20,6 +21,8 @@ module Development.Shake.Database(
     shakeWithDatabase,
     shakeOneShotDatabase,
     shakeRunDatabase,
+    shakeRunDatabaseForKeys,
+    SomeShakeValue(..),
     shakeLiveFilesDatabase,
     shakeProfileDatabase,
     shakeErrorsDatabase,
@@ -29,8 +32,11 @@ module Development.Shake.Database(
 import Control.Concurrent.Extra
 import Control.Exception
 import Control.Monad
+import Control.Monad.Extra (whenJust)
 import Control.Monad.IO.Class
+import qualified Data.HashSet as HashSet
 import Data.IORef
+import Data.Maybe
 import General.Cleanup
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Options
@@ -38,6 +44,8 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Rules.Default
+import Development.Shake.Internal.Value (SomeShakeValue(..), newKey)
+import Development.Shake.Internal.Core.Database (flushDirty, markDirty, getIdFromKey, runLocked)
 
 
 data UseState
@@ -135,17 +143,46 @@ shakeErrorsDatabase (ShakeDatabase use s) =
 --   actions along with a list of actions to run after the database was closed, as added with
 --   'Development.Shake.runAfter' and 'Development.Shake.removeFilesAfter'.
 shakeRunDatabase :: ShakeDatabase -> [Action a] -> IO ([a], [IO ()])
-shakeRunDatabase (ShakeDatabase use s) as =
+shakeRunDatabase = shakeRunDatabaseForKeys Nothing
+
+-- | Given an open 'ShakeDatabase', run both whatever actions were added to the 'Rules',
+--   plus the list of 'Action' given here.
+--
+--   Requires 'shakeReverseDependencies', otherwise it falls back to 'shakeRunDatabase'.
+--
+--   If a set of dirty keys is given, only the reverse dependencies of these keys
+--   will be considered potentially changed; all other keys will be assumed unchanged.
+--   This includes the 'AlwaysRerunQ' key which is by default always dirty, but
+--   will not here, unless it is included in the input.
+--
+--   Returns the results from the explicitly passed actions along with a list
+--   of actions to run after the database was closed, as added with
+--   'Development.Shake.runAfter' and 'Development.Shake.removeFilesAfter'.
+shakeRunDatabaseForKeys
+    :: Maybe [SomeShakeValue]       -- ^ Set of keys changed since last run
+    -> ShakeDatabase
+    -> [Action a]
+    -> IO ([a], [IO ()])
+shakeRunDatabaseForKeys keysChanged (ShakeDatabase use s) as = uninterruptibleMask $ \continue ->
     withOpen use "shakeRunDatabase" (\o -> o{openRequiresReset=True}) $ \Open{..} -> do
         when openRequiresReset $ do
             when openOneShot $
                 throwM $ errorStructured "Error when calling shakeRunDatabase twice, after calling shakeOneShotDatabase" [] ""
             reset s
-        (refs, as) <- fmap unzip $ forM as $ \a -> do
-            ref <- newIORef Nothing
-            pure (ref, liftIO . writeIORef ref . Just =<< a)
-        after <- run s openOneShot $ map void as
-        results <- mapM readIORef refs
-        case sequence results of
-            Just result -> pure (result, after)
-            Nothing -> throwM $ errorInternal "Expected all results were written, but some where not"
+            runLocked (database s) $ flushDirty (database s)
+
+        -- record the keys changed and continue
+        whenJust keysChanged $ \kk -> do
+            getId <- getIdFromKey (database s)
+            let ids = mapMaybe (\(SomeShakeValue x) -> getId $ newKey x) kk
+            markDirty (database s) $ HashSet.fromList ids
+
+        continue $ do
+            (refs, as) <- fmap unzip $ forM as $ \a -> do
+                ref <- newIORef Nothing
+                pure (ref, liftIO . writeIORef ref . Just =<< a)
+            after <- run s openOneShot (isJust keysChanged) $ map void as
+            results <- mapM readIORef refs
+            case sequence results of
+                Just result -> pure (result, after)
+                Nothing -> throwM $ errorInternal "Expected all results were written, but some where not"

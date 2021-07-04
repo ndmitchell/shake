@@ -7,6 +7,7 @@ module Development.Shake.Internal.Core.Build(
     historyIsEnabled, historySave, historyLoad,
     applyKeyValue,
     apply, apply1,
+    alwaysRerun
     ) where
 
 import Development.Shake.Classes
@@ -19,6 +20,7 @@ import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
 import Development.Shake.Internal.Options
+import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Internal.Core.Monad
 import General.Wait
 import qualified Data.ByteString.Char8 as BS
@@ -30,6 +32,7 @@ import Control.Exception
 import Control.Monad.Extra
 import Numeric.Extra
 import qualified Data.HashMap.Strict as Map
+import qualified Data.HashSet as HashSet
 import Development.Shake.Internal.Core.Rules
 import Data.Typeable
 import Data.Maybe
@@ -101,41 +104,91 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         pure $ Left e
     Right stack -> Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
-        let go = buildRunMode global stack database r
+        let go = buildRunMode global stack database i r
         fromLater go $ \mode -> liftIO $ addPool PoolStart globalPool $
-            runKey global stack k r mode $ \res -> do
+            runKey global stack k r mode $ \result -> do
                 runLocked database $ do
-                    let val = fmap runValue res
+                    let val = fmap runValue result
                     res <- liftIO $ getKeyValueFromId database i
                     w <- case res of
                         Just (_, Running (NoShow w) _) -> pure w
                         -- We used to be able to hit here, but we fixed it by ensuring the thread pool workers are all
                         -- dead _before_ any exception bubbles up
                         _ -> throwM $ errorInternal $ "expected Waiting but got " ++ maybe "nothing" (statusType . snd) res ++ ", key " ++ show k
-                    setIdKeyStatus global database i k $ either mkError Ready val
+
+                    -- Make sure that the reverse dependencies are marked to avoid unsoundness
+                    maskLocked $ do
+                        setIdKeyStatus global database i k $ either mkError Ready val
+                        liftIO $ unmarkDirty database i
+
+                        -- update reverse dependencies efficiently - have they changed since last time?
+                        case result of
+                            Right RunResult{..}
+                             | shakeReverseDependencies globalOptions &&
+                                runChanged `elem` [ChangedRecomputeDiff, ChangedRecomputeSame ] ->
+                                updateReverseDeps i database (depends <$> r) (depends runValue)
+                            _ -> pure ()
+
                     w val
-                case res of
+                case result of
                     Right RunResult{..} | runChanged /= ChangedNothing -> setDisk database i k $ Loaded runValue{result=runStore}
                     _ -> pure ()
     where
         mkError e = Failed e $ if globalOneShot then Nothing else r
 
 
+
+-- | Refresh all the reverse dependencies of an id
+updateReverseDeps :: Id -> Database -> Maybe [Depends] -> [Depends] -> Locked ()
+updateReverseDeps myId db prev new = {-# SCC "updateReverseDeps" #-} do
+    let added = foldMap fromDepends new
+        deleted = [] -- an efficient impl. is expensive in space, so we overestimate for now
+    forM_ added   $ doOne (HashSet.insert myId)
+    forM_ deleted $ doOne (HashSet.delete myId)
+    where
+        doOne f id = do
+            rdeps <- liftIO $ getReverseDependencies db id
+            setReverseDependencies db id (f $ fromMaybe mempty rdeps)
+
 -- | Compute the value for a given RunMode and a restore function to run
-buildRunMode :: Global -> Stack -> Database -> Maybe (Result a) -> Wait Locked RunMode
-buildRunMode global stack database me = do
-    changed <- case me of
+buildRunMode :: Global -> Stack -> Database -> Id -> Maybe (Result a) -> Wait Locked RunMode
+buildRunMode global stack database i r = do
+    changed <- case r of
         Nothing -> pure True
-        Just me -> buildRunDependenciesChanged global stack database me
+        Just me -> do
+            isDirty <- liftIO $ if globalUseDirtySet global then isDirty database i else pure True
+            if isDirty
+                -- Event if I am dirty, it is still possible that all my dependencies are unchanged
+                -- thanks to early cutoff, and therefore we must check to avoid redundant work
+                then buildRunDependenciesChanged global stack database i me
+                -- If I am not dirty then none of my dependencies are, so they must be unchanged
+                else do
+                    -- The only exception is rules with a direct dependency on alwaysRerun
+                    lookup <- liftIO $ getIdFromKey database
+                    let alwaysRerunId = lookup $ newKey $ AlwaysRerunQ ()
+                    pure $ case alwaysRerunId of
+                        Nothing -> False
+                        Just id -> any (\(Depends x) -> id `elem` x) (depends me)
     pure $ if changed then RunDependenciesChanged else RunDependenciesSame
 
+isDirtyOrAlwaysRerun :: MonadIO m => DatabasePoly Key v -> m (Id -> Bool)
+isDirtyOrAlwaysRerun database = do
+    lookup <- liftIO $ getIdFromKey database
+    dirtySet <- liftIO $ getDirtySet database
+    let alwaysRerunId = lookup $ newKey $ AlwaysRerunQ ()
+    pure $ \id -> Just id == alwaysRerunId || id `HashSet.member` dirtySet
 
 -- | Have the dependencies changed
-buildRunDependenciesChanged :: Global -> Stack -> Database -> Result a -> Wait Locked Bool
-buildRunDependenciesChanged global stack database me = isJust <$> firstJustM id
-    [firstJustWaitUnordered (fmap test . lookupOne global stack database) x | Depends x <- depends me]
+buildRunDependenciesChanged :: Global -> Stack -> Database -> Id -> Result a -> Wait Locked Bool
+buildRunDependenciesChanged global stack database i r = do
+    isDirty <- isDirtyOrAlwaysRerun database
+    isJust <$> firstJustM id
+        [firstJustWaitUnordered (fmap test . lookupOne global stack database) x'
+        | Depends x <- depends r
+        , let x' = if globalUseDirtySet global then filter isDirty x else x
+        ]
     where
-        test (Right dep) | changed dep <= built me = Nothing
+        test (Right dep) | changed dep <= built r = Nothing
         test _ = Just ()
 
 
@@ -341,3 +394,25 @@ runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> Maybe BS.ByteS
 runIdentify mp k v
     | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
     | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
+
+-------------------------------------------------------------------------------
+-- SPECIAL RULES
+
+-- | Always rerun the associated action. Useful for defining rules that query
+--   the environment. For example:
+--
+-- @
+-- \"ghcVersion.txt\" 'Development.Shake.%>' \\out -> do
+--     'alwaysRerun'
+--     'Development.Shake.Stdout' stdout <- 'Development.Shake.cmd' \"ghc --numeric-version\"
+--     'Development.Shake.writeFileChanged' out stdout
+-- @
+--
+--   In @make@, the @.PHONY@ attribute on file-producing rules has a similar effect.
+--
+--   Note that 'alwaysRerun' is applied when a rule is executed. Modifying an existing rule
+--   to insert 'alwaysRerun' will /not/ cause that rule to rerun next time.
+alwaysRerun :: Action ()
+alwaysRerun = do
+    historyDisable
+    apply1 $ AlwaysRerunQ ()

@@ -20,7 +20,6 @@ import Development.Shake.Internal.Errors
 import General.Extra
 import Development.Shake.Internal.FileName
 import Development.Shake.Classes
-import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.FilePattern
 import Development.Shake.FilePath

@@ -5,7 +5,7 @@
 module Development.Shake.Internal.Value(
     Value, newValue, fromValue,
     Key, newKey, fromKey, typeKey,
-    ShakeValue
+    ShakeValue, SomeShakeValue(..)
     ) where
 
 import Development.Shake.Classes
@@ -48,6 +48,12 @@ import Unsafe.Coerce
 -- * 'NFData' is used to avoid space and thunk leaks, especially
 --   when Shake is parallelized.
 type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
+
+data SomeShakeValue = forall k . ShakeValue k => SomeShakeValue k
+
+instance Eq SomeShakeValue where SomeShakeValue a == SomeShakeValue b = cast a == Just b
+instance Hashable SomeShakeValue where hashWithSalt s (SomeShakeValue x) = hashWithSalt s x
+instance Show SomeShakeValue where show (SomeShakeValue x) = show x
 
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves

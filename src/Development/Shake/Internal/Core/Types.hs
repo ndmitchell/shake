@@ -239,7 +239,10 @@ data Result a = Result
     ,depends :: ![Depends] -- ^ dependencies (don't run them early)
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
     ,traces :: ![Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
-    } deriving (Show,Functor)
+    } deriving (Functor)
+
+instance Show (Result a) where
+    show _ = "<result>"
 
 instance NFData a => NFData (Result a) where
     -- ignore unpacked fields
@@ -453,6 +456,7 @@ data Global = Global
     ,globalCloud :: Maybe Cloud
     ,globalStep :: {-# UNPACK #-} !Step
     ,globalOneShot :: Bool -- ^ I am running in one-shot mode so don't need to store BS's for Result/Failed
+    ,globalUseDirtySet :: Bool -- ^ Use the dirty set approximation when running rules
     }
 
 -- local variables of Action

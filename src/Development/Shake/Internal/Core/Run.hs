@@ -3,8 +3,10 @@
 {-# LANGUAGE ConstraintKinds, TupleSections, ViewPatterns #-}
 {-# LANGUAGE TypeFamilies, NamedFieldPuns #-}
 
+{-# LANGUAGE RankNTypes #-}
 module Development.Shake.Internal.Core.Run(
     RunState,
+    database,
     open,
     reset,
     run,
@@ -19,6 +21,7 @@ import Data.Tuple.Extra
 import Control.Concurrent.Extra hiding (withNumCapabilities)
 import Development.Shake.Internal.Core.Database
 import Control.Monad.IO.Class
+import qualified Control.Monad.Trans.State.Strict as State
 import General.Binary
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Storage
@@ -52,8 +55,11 @@ import General.Timing
 import General.Thread
 import General.Extra
 import General.Cleanup
+import qualified General.Ids as Ids
+import Data.Foldable (traverse_)
 import Data.Monoid
 import Prelude
+import Text.Printf
 
 
 ---------------------------------------------------------------------
@@ -100,8 +106,13 @@ reset RunState{..} = runLocked database $
         f x = x
 
 
-run :: RunState -> Bool -> [Action ()] -> IO [IO ()]
-run RunState{..} oneshot actions2 =
+run
+    :: RunState
+    -> Bool     -- ^ oneshot
+    -> Bool     -- ^ use dirty set
+    -> [Action ()]
+    -> IO [IO ()]
+run RunState{..} oneshot useDirtySet actions2 =
     withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
 
         -- timings are a bit delicate, we want to make sure we clear them before we leave (so each run is fresh)
@@ -141,8 +152,12 @@ run RunState{..} oneshot actions2 =
 
             addTiming "Running rules"
             locals <- newIORef []
+
+            let reallyUseDirtySet = useDirtySet && shakeReverseDependencies
+            when reallyUseDirtySet $ updateDirtySet diagnostic database
+
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
+                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot reallyUseDirtySet
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity
@@ -158,7 +173,7 @@ run RunState{..} oneshot actions2 =
             end <- start
             if null actions && null actions2 then
                 putWhen Info "Warning: No want/action statements, nothing to do"
-             else
+            else
                 recordRoot step locals end database
 
             when (isJust shakeLint) $ do
@@ -186,6 +201,28 @@ run RunState{..} oneshot actions2 =
         whenJustM (readIORef timingsToShow) $
             putStr . unlines
         pure res
+
+-- | Transitively expand the dirty set
+updateDirtySet :: (IO String -> IO()) -> Database -> IO ()
+updateDirtySet diag database = {-# SCC updateDirtySet #-} do
+    let loop x = do
+            seen <- State.get
+            if x `Set.member` seen then pure () else do
+                State.put (Set.insert x seen)
+                next <- liftIO $ getReverseDependencies database x
+                traverse_ loop (fromMaybe mempty next)
+    ids <- getDirtySet database
+    transitive <- flip State.execStateT Set.empty $ traverse_ loop ids
+
+    markDirty database transitive
+
+    diag $ do
+        dirtySet <- getDirtySet database
+        let st = Set.size dirtySet
+            res = take 500 $ Set.toList dirtySet
+            ellipsis = if st > 500 then "..." else ""
+        keys <- unlines . map (show . fst) . catMaybes <$> mapM (getKeyValueFromId database) res
+        pure $ printf "%d dirty set: \n%s\n%s" st keys ellipsis
 
 
 -- | Run a set of IO actions, treated as \"after\" actions, typically returned from
@@ -323,8 +360,9 @@ usingDatabase cleanup opts diagnostic owitness = do
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
         | (t,(version, BinaryOp{..})) <- step : root : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
     (status, journal) <- usingStorage cleanup opts diagnostic witness
+    rdeps <- Ids.empty
     journal<- pure $ \i k v -> journal (QTypeRep $ typeKey k) i (k, v)
-    createDatabase status journal Missing
+    createDatabase status rdeps journal Missing
 
 
 incrementStep :: Database -> IO Step
@@ -380,8 +418,8 @@ loadSharedCloud var opts owitness = do
 
 
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
-putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) =
-    putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x5 <> putExN (putEx x4) <> putEx x6
+putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x6 x7)) =
+    putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x6 <> putExN (putEx x4) <> putEx x7
 putDatabase _ (_, x) = throwImpure $ errorInternal $ "putWith, Cannot write Status with constructor " ++ statusType x
 
 
@@ -389,6 +427,6 @@ getDatabase :: (BS.ByteString -> Key) -> BS.ByteString -> (Key, Status)
 getDatabase getKey bs
     | (key, bs) <- getExN bs
     , (x1, bs) <- getExN bs
-    , (x2, x3, x5, bs) <- binarySplit3 bs
-    , (x4, x6) <- getExN bs
-    = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) x5 (getEx x6)))
+    , (x2, x3, x6, bs) <- binarySplit3 bs
+    , (x4, x7) <- getExN bs
+    = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) x6 (getEx x7)))

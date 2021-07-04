@@ -92,6 +92,7 @@ For those who like concrete details, which might change at any point in the futu
         ,built     :: Step    -- when it was actually run
         ,changed   :: Step    -- when the result last changed
         ,depends   :: [[Id]]  -- dependencies
+        ,rdepends  :: [Id]    -- reverse dependencies
         ,execution :: Float   -- duration of last run
         ,traces    :: [Trace] -- a trace of the expensive operations
         } deriving Show
@@ -180,13 +181,13 @@ isn't the case, and "output" would still be clean.
 >
 > In you rule `File -(ModTime, [(File, ModTime)]`. Is the time stored for a dependency
 >
-> 1 - the time the dependency has been last used 
+> 1 - the time the dependency has been last used
 >
 > 2 - the dependency last modification when the dependency has been used?
 >
 > For example. Let's say B depends on A and A has been modified yesterday.
 >
-> If I'm building B today: scenario (1) would be store 
+> If I'm building B today: scenario (1) would be store
 >
 > database B = (Today, [(A, Today)])
 >

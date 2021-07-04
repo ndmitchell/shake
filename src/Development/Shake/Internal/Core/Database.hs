@@ -1,12 +1,16 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards #-}
 
+{-# LANGUAGE TupleSections #-}
 module Development.Shake.Internal.Core.Database(
     Locked, runLocked,
+    maskLocked,
     DatabasePoly, createDatabase,
     mkId,
     getValueFromKey, getIdFromKey, getKeyValues, getKeyValueFromId, getKeyValuesFromId,
-    setMem, setDisk, modifyAllMem
+    setMem, setDisk, modifyAllMem,
+    isDirty, getDirtySet, markDirty, unmarkDirty, flushDirty,
+    getReverseDependencies, setReverseDependencies
     ) where
 
 import Data.Tuple.Extra
@@ -20,6 +24,9 @@ import Control.Monad.IO.Class
 import qualified General.Ids as Ids
 import Control.Monad.Fail
 import Prelude
+import Control.Exception (mask_)
+import Data.HashSet (HashSet)
+import qualified Data.HashSet as HSet
 
 
 newtype Locked a = Locked (IO a)
@@ -28,6 +35,8 @@ newtype Locked a = Locked (IO a)
 runLocked :: DatabasePoly k v -> Locked b -> IO b
 runLocked db (Locked act) = withLock (lock db) act
 
+maskLocked :: Locked a -> Locked a
+maskLocked (Locked act) = Locked $ mask_ act
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
 --   Everything is mutable. intern and status must form a bijecttion.
@@ -37,21 +46,27 @@ data DatabasePoly k v = Database
     {lock :: Lock
     ,intern :: IORef (Intern k) -- ^ Key |-> Id mapping
     ,status :: Ids.Ids (k, v) -- ^ Id |-> (Key, Status) mapping
+    ,rdeps  :: Ids.Ids (HashSet Id) -- ^ Id |-> reverse dependencies
     ,journal :: Id -> k -> v -> IO () -- ^ Record all changes to status
     ,vDefault :: v
+    ,clean,dirty :: IORef (HashSet Id)
+    -- ^ An approximation of the dirty set across runs of 'shakeRunDatabaseForKeys'
     }
 
 
 createDatabase
     :: (Eq k, Hashable k)
     => Ids.Ids (k, v)
+    -> Ids.Ids (HashSet Id)
     -> (Id -> k -> v -> IO ())
     -> v
     -> IO (DatabasePoly k v)
-createDatabase status journal vDefault = do
+createDatabase status rdeps journal vDefault = do
     xs <- Ids.toList status
     intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
     lock <- newLock
+    dirty <- newIORef mempty
+    clean <- newIORef mempty
     pure Database{..}
 
 
@@ -80,6 +95,14 @@ getIdFromKey Database{..} = do
     is <- readIORef intern
     pure $ flip Intern.lookup is
 
+isDirty :: DatabasePoly k v -> Id -> IO Bool
+isDirty Database{..} i = HSet.member i <$> readIORef dirty
+
+getDirtySet :: DatabasePoly k v -> IO (HashSet Id)
+getDirtySet Database{..} = readIORef dirty
+
+getReverseDependencies :: DatabasePoly k v -> Id -> IO (Maybe (HashSet Id))
+getReverseDependencies Database{..} = Ids.lookup rdeps
 
 ---------------------------------------------------------------------
 -- MUTATING
@@ -101,6 +124,9 @@ mkId Database{..} k = liftIO $ do
 setMem :: DatabasePoly k v -> Id -> k -> v -> Locked ()
 setMem Database{..} i k v = liftIO $ Ids.insert status i (k,v)
 
+setReverseDependencies :: DatabasePoly k v -> Id -> HashSet Id -> Locked ()
+setReverseDependencies Database{..} = (liftIO.) . Ids.insert rdeps
+
 modifyAllMem :: DatabasePoly k v -> (v -> v) -> Locked ()
 modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ \(k,v) ->
     let !v' = f v
@@ -108,3 +134,15 @@ modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ \(k,v) ->
 
 setDisk :: DatabasePoly k v -> Id -> k -> v -> IO ()
 setDisk = journal
+
+markDirty :: DatabasePoly k v -> HashSet Id -> IO ()
+markDirty Database{..} ids = atomicModifyIORef'_ dirty $ HSet.union ids
+
+unmarkDirty :: DatabasePoly k v -> Id -> IO ()
+unmarkDirty Database{..} i = do
+    atomicModifyIORef'_ clean (HSet.insert i)
+
+flushDirty :: DatabasePoly k v -> Locked ()
+flushDirty Database{..} = liftIO $ do
+    cleanIds <- atomicModifyIORef' clean (mempty,)
+    atomicModifyIORef'_ dirty (`HSet.difference` cleanIds)
