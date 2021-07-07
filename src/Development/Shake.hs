@@ -65,7 +65,7 @@ module Development.Shake(
     -- ** Targets
     getTargets, addTarget, withTargetDocs, withoutTargets,
     -- ** Progress reporting
-    Progress(..), progressSimple, progressDisplay, progressTitlebar, progressProgram, getProgress,
+    Progress(..), progressSimple, progressDisplay, progressTitlebar, progressProgram, getProgress, progressTracker,
     -- ** Verbosity
     Verbosity(..), getVerbosity, putVerbose, putInfo, putWarn, putError, withVerbosity, quietly,
     -- * Running commands
