@@ -10,9 +10,7 @@ preferred-citation:
     given-names: Neil
     orcid: "https://orcid.org/0000-0001-5171-9726"
   doi: "10.1145/2398856.2364538"
-  conference:
-    name: "ICFP '12: Proceedings of the 17th ACM SIGPLAN International Conference on Functional Programming"
-    location: "Copenhagen, Denmark"
+  journal: "ICFP '12: Proceedings of the 17th ACM SIGPLAN International Conference on Functional Programming"
   month: 9
   day: 10
   isbn: 978-1-4503-1054-3
