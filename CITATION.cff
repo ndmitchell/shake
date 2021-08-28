@@ -12,7 +12,7 @@ preferred-citation:
   doi: "10.1145/2398856.2364538"
   conference:
   - name: "ICFP '12: Proceedings of the 17th ACM SIGPLAN International Conference on Functional Programming"
-  - location: "Copenhagen, Denmark"
+    location: "Copenhagen, Denmark"
   month: 9
   day: 10
   start: 55
