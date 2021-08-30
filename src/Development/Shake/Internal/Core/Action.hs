@@ -99,15 +99,20 @@ actionBracketEx runOnSuccess alloc free act = do
     pure res
 
 -- | If an exception is raised by the 'Action', perform some 'IO' then reraise the exception.
+--   This function is implemented using 'actionBracket'.
 actionOnException :: Action a -> IO b -> Action a
 actionOnException act free = actionBracketEx False (pure ()) (const free) (const act)
 
 -- | After an 'Action', perform some 'IO', even if there is an exception.
+--   This function is implemented using 'actionBracket'.
 actionFinally :: Action a -> IO b -> Action a
 actionFinally act free = actionBracket (pure ()) (const free) (const act)
 
--- | Like `bracket`, but where the inner operation is of type 'Action'. Usually used as
+-- | Like 'bracket', but where the inner operation is of type 'Action'. Usually used as
 --   @'actionBracket' alloc free use@.
+--
+--   The @free@ action will be run masked. The cost of 'actionBracket' is _O(n log n)_
+--   in the number of simultaneous 'actionBracket' calls active in the program.
 actionBracket :: IO a -> (a -> IO b) -> (a -> Action c) -> Action c
 actionBracket = actionBracketEx True
 
