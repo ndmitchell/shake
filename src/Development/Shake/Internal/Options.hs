@@ -2,7 +2,7 @@
 
 -- | Types exposed to the user
 module Development.Shake.Internal.Options(
-    Progress(..), Verbosity(..), Rebuild(..), Lint(..), Change(..),
+    Progress(..), Verbosity(..), Rebuild(..), Lint(..), Change(..), FileHash,
     ShakeOptions(..), shakeOptions,
     -- Internal stuff
     shakeRebuildApply, shakeAbbreviationsApply, shakeOptionsFields
@@ -18,6 +18,7 @@ import General.Extra
 import System.Time.Extra
 import qualified Data.HashMap.Strict as Map
 import Development.Shake.Internal.FilePattern
+import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.Errors
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
@@ -228,6 +229,8 @@ data ShakeOptions = ShakeOptions
     ,shakeTrace :: String -> String -> Bool -> IO ()
         -- ^ Defaults to doing nothing.
         --   Called for each call of 'Development.Shake.traced', with the key, the command and 'True' for starting, 'False' for stopping.
+    ,shakeTraceHashFile :: FilePath -> FileHash -> IO ()
+        -- ^ Trace hashing of files. Intended for debugging and testing
     ,shakeExtra :: Map.HashMap TypeRep Dynamic
         -- ^ This a map which can be used to store arbitrary extra information that a user may need when writing rules.
         --   The key of each entry must be the 'dynTypeRep' of the value.
@@ -244,6 +247,7 @@ shakeOptions = ShakeOptions
     (const $ pure ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
     (\_ _ _ -> pure ())
+    (\_ _ -> pure ())
     Map.empty
 
 fieldsShakeOptions =
@@ -256,16 +260,16 @@ fieldsShakeOptions =
     ,"shakeProgress", "shakeOutput", "shakeTrace", "shakeExtra"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 y1 y2 y3 y4 =
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 y1 y2 y3 y4 y5 =
   ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28
-        (fromHidden y1) (fromHidden y2) (fromHidden y3) (fromHidden y4)
+        (fromHidden y1) (fromHidden y2) (fromHidden y3) (fromHidden y4) (fromHidden y5)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 y1 y2 y3 y4) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 y1 y2 y3 y4 y5) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
         x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k` x23 `k` x24 `k` x25 `k` x26 `k` x27 `k` x28 `k`
-        Hidden y1 `k` Hidden y2 `k` Hidden y3 `k` Hidden y4
-    gunfold k z _ = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+        Hidden y1 `k` Hidden y2 `k` Hidden y3 `k` Hidden y4 `k` Hidden y5
+    gunfold k z _ = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
@@ -287,6 +291,7 @@ shakeOptionsFields = zipExact fieldsShakeOptions . gmapQ f
             | Just x <- cast x = show (x :: Hidden (Verbosity -> String -> IO ()))
             | Just x <- cast x = show (x :: Hidden (Map.HashMap TypeRep Dynamic))
             | Just x <- cast x = show (x :: Hidden (String -> String -> Bool -> IO ()))
+            | Just x <- cast x = show (x :: Hidden (FilePath -> FileHash -> IO ()))
             | Just x <- cast x = show (x :: [CmdOption])
             | otherwise = throwImpure $ errorInternal $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 

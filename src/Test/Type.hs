@@ -2,14 +2,14 @@
 
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
-    testBuildArgs, testBuild, testSimple, testNone,
+    testBuildArgs, testBuild, testBuildTrackHash, testSimple, testNone,
     shakeRoot,
     defaultTest, hasTracker, notCI,
     copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
     assertBool, assertBoolIO, assertException, assertExceptionAfter,
     assertContents, assertContentsUnordered, assertContentsWords, assertContentsInfix,
-    assertExists, assertMissing,
+    assertExists, assertMissing, assertNoHashes,
     assertTimings,
     (===),
     (&?%>),
@@ -25,7 +25,7 @@ import General.Extra
 import Development.Shake.Internal.FileInfo
 import Development.Shake.FilePath
 import Development.Shake.Internal.Paths
-
+import Data.IORef
 import Control.Exception.Extra
 import Control.Monad.Extra
 import Data.List.Extra
@@ -40,6 +40,8 @@ import General.GetOpt
 import System.IO.Extra as IO
 import System.Time.Extra
 import System.Info.Extra
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
 
 
 testBuildArgs
@@ -48,7 +50,7 @@ testBuildArgs
     -> ([a] -> Rules ()) -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-testBuildArgs f opts g = shakenEx False opts f
+testBuildArgs f opts g = shakenEx False Nothing opts f
     (\os args -> if null args then g os else want args >> withoutActions (g os))
 
 testBuild
@@ -58,6 +60,15 @@ testBuild
     -> IO ()
 testBuild f g = testBuildArgs f [] (const g)
 
+testBuildTrackHash
+    :: IORef (HashMap FilePath FileHash) -- ^
+    -> (([String] -> IO ()) -> IO ()) -- ^ The test driver
+    -> Rules () -- ^ The Shake script under test
+    -> IO () -- ^ Sleep function, driven by passing @--sleep@
+    -> IO ()
+testBuildTrackHash ref f g = shakenEx False (Just ref) [] f
+    (\_ args -> if null args then g else want args >> withoutActions g)
+
 testSimple :: IO () -> IO () -> IO ()
 testSimple act = testBuild (const act) (pure ())
 
@@ -66,12 +77,13 @@ testNone _ = pure ()
 
 shakenEx
     :: Bool
+    -> Maybe (IORef (HashMap FilePath FileHash))
     -> [OptDescr (Either String a)]
     -> (([String] -> IO ()) -> IO ())
     -> ([a] -> [String] -> Rules ())
     -> IO ()
     -> IO ()
-shakenEx reenter options test rules sleeper = do
+shakenEx reenter mb_hashref options test rules sleeper = do
     initDataDirectory
 
     name:args <- getArgs
@@ -87,11 +99,14 @@ shakenEx reenter options test rules sleeper = do
             withCurrentDirectory (now </> "..") $ do
                 removePathForcibly now
                 createDirectoryRecursive now
+    let traceHashFile = case mb_hashref of
+          Nothing -> shakeTraceHashFile shakeOptions
+          Just ref -> \f h -> atomicModifyIORef' ref $ \m -> (HashMap.insert f h m, ())
     unless reenter $ createDirectoryRecursive out
     case args of
         "test":_ -> do
             putStrLn $ "## TESTING " ++ name
-            change $ test (\args -> withArgs (name:args) $ shakenEx True options test rules sleeper)
+            change $ test (\args -> withArgs (name:args) $ shakenEx True mb_hashref options test rules sleeper)
             putStrLn $ "## FINISHED TESTING " ++ name
 
         "clean":args -> do
@@ -102,11 +117,11 @@ shakenEx reenter options test rules sleeper = do
             del <- removeFilesRandom out
             threads <- randomRIO (1,4)
             putStrLn $ "## TESTING PERTURBATION (" ++ show del ++ " files, " ++ show threads ++ " threads)"
-            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Error} $ rules [] args
+            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Error, shakeTraceHashFile=traceHashFile} $ rules [] args
 
         args -> change $ do
             t <- tracker
-            opts <- pure shakeOptions{shakeFiles = "."}
+            opts <- pure shakeOptions{shakeFiles = ".", shakeTraceHashFile = traceHashFile}
             cwd <- getCurrentDirectory
             opts <- pure $ if forward then forwardOptions opts{shakeLintInside=[""]} else opts
                 {shakeLint = Just t
@@ -246,6 +261,11 @@ assertTimings build expect = do
         case lookup name got of
             Nothing -> assertFail $ "Couldn't find key " ++ show name ++ " in profiling output"
             Just v -> assertBool (v >= val && v < (val + 1)) $ "Unexpected value, got " ++ show v ++ ", hoping for " ++ show val ++ " (+ 1 sec)"
+
+assertNoHashes :: IORef (HashMap FilePath FileHash) -> IO ()
+assertNoHashes ref = do
+  no_hashes <- atomicModifyIORef' ref $ \x -> (x, null x)
+  assertBool no_hashes "We expected no hashes but we were dissapointed"
 
 
 defaultTest :: ([String] -> IO ()) -> IO ()

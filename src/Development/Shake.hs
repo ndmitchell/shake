@@ -59,7 +59,7 @@ module Development.Shake(
     -- * Configuration
     ShakeOptions(..), Rebuild(..), Lint(..), Change(..),
     getShakeOptions, getShakeOptionsRules, getHashedShakeVersion,
-    getShakeExtra, getShakeExtraRules, addShakeExtra,
+    getShakeExtra, getShakeExtraRules, addShakeExtra, FileHash,
     -- ** Command line
     shakeArgs, shakeArgsWith, shakeArgsOptionsWith, shakeOptDescrs, addHelpSuffix,
     -- ** Targets

@@ -4,9 +4,14 @@ module Test.Digest(main) where
 import Control.Monad
 import Development.Shake
 import Test.Type
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
+import Data.IORef
 
-
-main = testBuild test $ do
+main :: IO() -> IO ()
+main sleep = do
+  ref <- newIORef HashMap.empty
+  flip (testBuildTrackHash ref (test ref)) sleep $ do
     want ["Out.txt","Out2.txt"]
 
     "Out.txt" %> \out -> do
@@ -32,20 +37,25 @@ main = testBuild test $ do
         forM_ outs $ \out -> writeFile' out "rewrite"
 
 
-test build = do
+test :: IORef (HashMap FilePath FileHash) -> ([String] -> IO ()) -> IO ()
+test ref build = do
     let outs = ["Out.txt","Out1.txt","Out2.txt"]
     let writeOut x = forM_ outs $ \out -> writeFile out x
     let writeIn = writeFile "In.txt"
     let assertOut x = forM_ outs $ \out -> assertContents out x
+    let clearTrackedHashes = atomicModifyIORef' ref $ \_ -> (HashMap.empty, ())
+    let getTrackedHashes  = atomicModifyIORef' ref $ \x -> (x, x)
+    let assertEmptyHashes = assertNoHashes ref
 
     writeOut ""
     writeIn "X"
     build ["--sleep","--digest-and"]
     assertOut "X"
 
-    -- should not involve a hash calculation (sadly no way to test that)
+    clearTrackedHashes
     build ["--sleep","--digest-and"]
     assertOut "X"
+    assertEmptyHashes
 
     writeIn "X"
     build ["--sleep","--digest-and"]
