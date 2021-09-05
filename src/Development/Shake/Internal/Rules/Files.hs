@@ -119,7 +119,9 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
             case v of
                 Just v -> case filesEqualValue opts old v of
                     NotEqual -> rebuild
-                    EqualCheap -> pure $ RunResult ChangedNothing (fromJust o) v
+                    -- See #810, important we pass old (which can be cheaply evaluated)
+                    -- and not v, which might have some lazily-evaluated file hashes in
+                    EqualCheap -> pure $ RunResult ChangedNothing (fromJust o) old
                     EqualExpensive -> pure $ RunResult ChangedStore (runBuilder $ putEx $ Result ver v) v
                 Nothing -> rebuild
         _ -> rebuild

@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #810, don't hash files in &%> if you don't have to
 0.19.5, released 2021-07-04
     #807, fix space leak in Database module
     #796, fix a bug with newCache dependencies
