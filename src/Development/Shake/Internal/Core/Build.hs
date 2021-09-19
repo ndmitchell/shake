@@ -48,7 +48,10 @@ setIdKeyStatus Global{..} db i k v = do
         old <- getKeyValueFromId db i
         let changeStatus = maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
         let changeValue = case v of
-                Ready r -> Just $ "    = " ++ showBracket (result r) ++ " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
+                Ready r -> Just $ "    = " ++ showBracket (result r) ++ " " ++
+                    if changed r == globalStep then "(changed)"
+                    else if built r == globalStep then "(unchanged)"
+                    else "(didn't run)"
                 _ -> Nothing
         pure $ changeStatus ++ maybe "" ("\n" ++) changeValue
     setMem db i k v
