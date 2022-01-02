@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #815, improve corrupt database handling code
     Don't say (changed) for files that don't build
 0.19.6, released 2021-09-07
     #810, don't hash files in &%> if you don't have to
