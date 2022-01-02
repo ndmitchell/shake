@@ -1,6 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ViewPatterns #-}
 
+-- Keep using iso8601DateFormat, since the alternative was introduced in time-1.9
+-- while GHC 8.6 still has time-1.8.
+-- Safe once we no longer support GHC 8.6.
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 #ifdef FILE_EMBED
 {-# LANGUAGE TemplateHaskell #-}
 #endif
