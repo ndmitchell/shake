@@ -11,7 +11,8 @@ import Data.Char
 import Data.List.Extra
 
 
-main = testBuild (notWindowsCI . defaultTest) $ do
+-- Can't get the paths to work on CI with tracking etc
+main = testBuild (notCI . defaultTest) $ do
     let index = "dist/doc/html/shake/index.html"
     let setup = "dist/setup.exe"
     let config = "dist/setup-config"
