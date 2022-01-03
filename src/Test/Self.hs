@@ -10,7 +10,7 @@ import Test.Type
 import Control.Monad.Extra
 import Data.Char
 import Data.List.Extra
-import System.Info
+import System.Info.Extra
 
 
 newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
@@ -85,7 +85,7 @@ hsImports xs = [ takeWhile (\x -> isAlphaNum x || x `elem` "._") $ dropWhile (no
 
 -- FIXME: Should actually parse the list from the contents of the .cabal file
 cabalBuildDepends :: String -> [String]
-cabalBuildDepends _ = packages ++ ["unix" | os /= "mingw32"]
+cabalBuildDepends _ = packages ++ ["unix" | not isWindows]
 
 packages = words $
     "base transformers binary unordered-containers hashable heaps time bytestring primitive " ++
