@@ -20,7 +20,7 @@ newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData
 type instance RuleResult GhcPkg = [String]
 type instance RuleResult GhcFlags = [String]
 
-main = testBuild defaultTest $ do
+main = testBuild (notWindowsCI . defaultTest) $ do
     want ["Main" <.> exe]
 
     ghcPkg <- addOracleHash $ \GhcPkg{} -> do

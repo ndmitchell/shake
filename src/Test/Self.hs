@@ -20,7 +20,7 @@ type instance RuleResult GhcPkg = [String]
 type instance RuleResult GhcFlags = [String]
 
 -- Doesn't work on the Windows CI for reasons I don't understand
-main = testBuild (notCI . defaultTest) $ do
+main = testBuild (notWindowsCI . defaultTest) $ do
     let moduleToFile ext xs = replace "." "/" xs <.> ext
     want ["Main" <.> exe]
 
