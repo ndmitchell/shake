@@ -4,7 +4,7 @@ module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
     testBuildArgs, testBuild, testSimple, testNone,
     shakeRoot,
-    defaultTest, hasTracker, notCI, notWindowsCI,
+    defaultTest, hasTracker, notCI, notWindowsCI, notMacCI,
     copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
     assertBool, assertBoolIO, assertException, assertExceptionAfter,
@@ -164,6 +164,10 @@ notCI act = do
 -- Tests that don't currently work on Windows CI
 notWindowsCI :: IO () -> IO ()
 notWindowsCI = if isWindows then notCI else id
+
+-- Tests that don't currently work on Mac CI
+notMacCI :: IO () -> IO ()
+notMacCI = if isMac then notCI else id
 
 hasTracker :: IO Bool
 hasTracker = do

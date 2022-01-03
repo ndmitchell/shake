@@ -195,7 +195,7 @@ test build = do
     crash ["failcreates"] ["failcreates"]
     crash ["recursive_"] ["recursive_","intermediate_","recursive"]
     crash ["rec1","rec2"] ["rec1","rec2","indirect recursion","recursive"]
-    crash ["systemcmd"] $ ["systemcmd","random_missing_command"] ++ ["at cmd, called at" | hasLocations]
+    notMacCI $ crash ["systemcmd"] $ ["systemcmd","random_missing_command", "at cmd, called at"]
     crash ["stack1"] ["stack1","stack2","stack3","crash"]
 
     b <- IO.doesFileExist "staunch1"
