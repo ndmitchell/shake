@@ -28,8 +28,8 @@ main = testBuild defaultTest $ do
 
     ghcPkg <- addOracleHash $ \GhcPkg{} -> do
         -- Debug info
-        cmd "ghc-pkg list"
-        cmd "ghc-pkg describe unordered-contaainers"
+        cmd_ "ghc-pkg list"
+        cmd_ "ghc-pkg describe unordered-containers"
         Stdout out <- quietly $ cmd "ghc-pkg list --simple-output"
         pure $ words out
 
