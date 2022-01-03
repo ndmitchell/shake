@@ -27,7 +27,7 @@ main = testBuild test $ do
         writeFile' out ""
 
     "pause.*" %> \out -> do
-        liftIO $ sleep 0.1
+        liftIO $ sleep 0.2
         need ["cdir" <.> takeExtension out]
         writeFile' out ""
 
@@ -36,7 +36,7 @@ main = testBuild test $ do
         let dir2 = "dir" ++ takeExtension out
         liftIO $ createDirectoryRecursive dir2
         liftIO $ setCurrentDirectory dir2
-        liftIO $ sleep 0.2
+        liftIO $ sleep 0.4
         liftIO $ setCurrentDirectory pwd
         writeFile' out ""
 
