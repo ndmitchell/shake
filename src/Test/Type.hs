@@ -4,7 +4,7 @@ module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
     testBuildArgs, testBuild, testSimple, testNone,
     shakeRoot,
-    defaultTest, hasTracker, notCI,
+    defaultTest, hasTracker, notCI, notWindowsCI,
     copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
     assertBool, assertBoolIO, assertException, assertExceptionAfter,
@@ -160,6 +160,10 @@ notCI :: IO () -> IO ()
 notCI act = do
     b <- lookupEnv "CI"
     when (isNothing b) act
+
+-- Tests that don't currently work on Windows CI
+notWindowsCI :: IO () -> IO ()
+notWindowsCI = if isWindows then notCI else id
 
 hasTracker :: IO Bool
 hasTracker = do
