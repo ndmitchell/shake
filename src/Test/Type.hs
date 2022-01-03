@@ -152,7 +152,8 @@ shakeRoot = "../.."
 tracker :: IO Lint
 tracker = do
     fsatrace <- findExecutable $ "fsatrace" <.> exe
-    pure $ if isJust fsatrace then LintFSATrace else LintBasic
+    -- Tracking on a Mac is pretty unreliable
+    pure $ if not isMac && isJust fsatrace then LintFSATrace else LintBasic
 
 -- Tests that don't currently work on CI
 notCI :: IO () -> IO ()
@@ -163,8 +164,7 @@ notCI act = do
 hasTracker :: IO Bool
 hasTracker = do
     t <- tracker
-    -- Tracking on a Mac is pretty unreliable
-    pure $ not isMac && t == LintFSATrace
+    pure $ t == LintFSATrace
 
 assertFail :: String -> IO a
 assertFail msg = error $ "ASSERTION FAILED: " ++ msg
