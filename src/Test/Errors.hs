@@ -12,8 +12,6 @@ import Control.Concurrent.Extra
 import General.GetOpt
 import General.Extra
 import Data.IORef
-import System.Info
-import Data.Version.Extra
 import Control.Exception.Extra
 import System.Directory as IO
 import System.Time.Extra
@@ -179,8 +177,6 @@ main = testBuildArgs test optionsEnum $ \args -> do
         liftIO $ putStrLn $ let x = x in x
 
 test build = do
-    let hasLocations = compilerVersion >= readVersion "8.0" -- when GHC got support for locations
-
     -- on Windows, file paths may end up with \ separators, make sure we can still match them
     let crash args parts = assertExceptionAfter (replace "\\" "/") parts (build $ "--quiet" : args)
     build ["clean"]
@@ -232,14 +228,14 @@ test build = do
     assertContents "overlap.txt" "overlap.txt"
     crash ["overlap.txx"] $
         ["key matches multiple rules","matched:  4","overlap.txx","overlap.t*","overlap.*","*.tox"] ++
-        ["Test/Errors.hs" | hasLocations]
+        ["Test/Errors.hs"]
 
     crash ["tempfile"] ["tempfile-died"]
     src <- readFile "tempfile"
     assertMissing src
     build ["tempdir"]
 
-    crash ["--die"] $ ["Shake","death error"] ++ ["Test/Errors.hs" | hasLocations]
+    crash ["--die"] $ ["Shake","death error","Test/Errors.hs"]
 
     putStrLn "## BUILD errors"
     (out,_) <- IO.captureOutput $ build []

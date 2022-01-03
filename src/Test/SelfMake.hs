@@ -10,8 +10,6 @@ import Test.Self(cabalBuildDepends)
 import Test.Type
 
 import Data.List.Extra
-import System.Info
-import Data.Version.Extra
 
 
 newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
@@ -48,7 +46,7 @@ main = testBuild (notWindowsCI . defaultTest) $ do
         trackAllow ["**/*.o","**/*.hi","Makefile"]
         ghc $ ["-M",run] ++ flags
         need . filter (\x -> takeExtension x == ".hs") . concatMap snd . parseMakefile =<< liftIO (readFile "Makefile")
-        ghc $ ["-o",out,run] ++ ["-j4" | compilerVersion >= makeVersion [7,8]] ++ flags
+        ghc $ ["-o",out,run,"-j4"] ++ flags
 
     ".pkgs" %> \out -> do
         src <- readFile' $ shakeRoot </> "shake.cabal"
