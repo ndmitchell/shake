@@ -250,7 +250,7 @@ assertTimings build expect = do
 
 defaultTest :: ([String] -> IO ()) -> IO ()
 defaultTest build = do
-    build ["--abbrev=output=$OUT","-j3","--report"]
+    build ["--abbrev=output=$OUT","-j1","--report"]
     build ["--no-build","--report=-"]
     build []
 
