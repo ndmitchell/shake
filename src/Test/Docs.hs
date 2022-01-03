@@ -16,7 +16,7 @@ main = testBuild (notWindowsCI . defaultTest) $ do
     let setup = "dist/setup.exe"
     let config = "dist/setup-config"
     want ["Success.txt"]
-    let trackIgnore = trackAllow ["dist/**"]
+    let trackIgnore = trackAllow ["dist/**", "dist-newstyle/**"]
 
     let needSource = need =<< getDirectoryFiles "." (map (shakeRoot </>)
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
