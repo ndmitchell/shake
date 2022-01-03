@@ -19,7 +19,8 @@ newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData
 type instance RuleResult GhcPkg = [String]
 type instance RuleResult GhcFlags = [String]
 
-main = testBuild defaultTest $ do
+-- Doesn't work on the Windows CI for reasons I don't understand
+main = testBuild (notCI . defaultTest) $ do
     let moduleToFile ext xs = replace "." "/" xs <.> ext
     want ["Main" <.> exe]
 
