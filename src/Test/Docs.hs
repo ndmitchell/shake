@@ -7,18 +7,11 @@ import Development.Shake.FilePath
 import qualified System.FilePattern.Directory as IO
 import System.Directory
 import Test.Type
-import Control.Monad
 import Data.Char
 import Data.List.Extra
-import System.Info
-import Data.Version.Extra
 
 
--- Older versions of Haddock (GHC 7.10 and below) garbage the --@ markup and have ambiguity errors
--- GHC 8.0 has a segfault when linking Setup
-brokenHaddock = compilerVersion < makeVersion [8,2]
-
-main = testBuild (notCI . unless brokenHaddock . defaultTest) $ do
+main = testBuild (notWindowsCI . defaultTest) $ do
     let index = "dist/doc/html/shake/index.html"
     let setup = "dist/setup.exe"
     let config = "dist/setup-config"
