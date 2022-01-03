@@ -124,9 +124,6 @@ library
         cpp-options: -DNETWORK
         build-depends: network, network-uri
 
-    if impl(ghc < 8.0)
-        build-depends: semigroups >= 0.18
-
     exposed-modules:
         Development.Shake
         Development.Shake.Classes
