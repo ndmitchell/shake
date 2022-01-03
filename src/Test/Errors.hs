@@ -291,7 +291,7 @@ test build = do
     t <- forkIO $ build ["finalfinal","--quiet"]
     sleep 0.2
     killThread t
-    sleep 0.3
+    sleep 0.5
     assertContents "finalfinal" "XY"
 
     build ["catch1"]
