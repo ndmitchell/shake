@@ -27,6 +27,9 @@ main = testBuild defaultTest $ do
     let fixPaths x = if x == "Paths_shake.hs" then "Paths.hs" else x
 
     ghcPkg <- addOracleHash $ \GhcPkg{} -> do
+        -- Debug info
+        cmd "ghc-pkg list"
+        cmd "ghc-pkg describe unordered-contaainers"
         Stdout out <- quietly $ cmd "ghc-pkg list --simple-output"
         pure $ words out
 
