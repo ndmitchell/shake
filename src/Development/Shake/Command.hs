@@ -53,6 +53,7 @@ import Development.Shake.Internal.CmdOption
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Types hiding (Result)
 import Development.Shake.FilePath
+import Development.Shake.Internal.FilePattern
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Derived
@@ -286,7 +287,7 @@ parseFSA = mapMaybe (f . dropR) . BS.lines
 -- | Given explicit operations, apply the Action ones, like skip/trace/track/autodep
 commandExplicitAction :: Partial => Params -> Action [Result]
 commandExplicitAction oparams = do
-    ShakeOptions{shakeCommandOptions,shakeRunCommands,shakeLint,shakeLintInside} <- getShakeOptions
+    ShakeOptions{shakeCommandOptions,shakeRunCommands,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
     params@Params{..}<- pure $ oparams{opts = shakeCommandOptions ++ opts oparams}
 
     let skipper act = if null results && not shakeRunCommands then pure [] else act
@@ -317,7 +318,7 @@ commandExplicitAction oparams = do
             -- If something both reads and writes to a file, it isn't eligible to be an autodeps
             xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs, not $ x `Set.member` written]
             cwd <- liftIO getCurrentDirectory
-            temp <- fixPaths cwd xs
+            temp <- filter (not . (?==*) shakeLintIgnore) <$> fixPaths cwd xs
             unsafeAllowApply $ need temp
             pure res
 
