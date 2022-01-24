@@ -104,7 +104,9 @@ parseLit x = case split (== '*') x of
 
 internalTest :: IO ()
 internalTest = do
-    let x # y = when (parse x /= y) $ fail $ show ("FilePattern.internalTest",x,parse x,y)
+    let x # y =
+            let p = parse x
+            in when (p /= y) $ fail $ show ("FilePattern.internalTest",x,p,y)
     "" # [Lit ""]
     "x" # [Lit "x"]
     "/" # [Lit "",Lit ""]
