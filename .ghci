@@ -1,5 +1,5 @@
 :set -ignore-package=hashmap
-:set -fwarn-unused-binds -fwarn-unused-imports -fwarn-orphans
+:set -Wunused-binds -Wunused-imports -Worphans
 :set -isrc
 :set -package file-embed
 :set -DFILE_EMBED
