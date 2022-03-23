@@ -30,7 +30,7 @@ runLocked db (Locked act) = withLock (lock db) act
 
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
---   Everything is mutable. intern and status must form a bijecttion.
+--   Everything is mutable. intern and status must form a bijection.
 --   There may be dangling Id's as a result of version changes.
 --   Lock is used to prevent any torn updates
 data DatabasePoly k v = Database
