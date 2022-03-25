@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
--- | The IO in this module is only to evaluate an envrionment variable,
+-- | The IO in this module is only to evaluate an environment variable,
 --   the 'Env' itself it passed around purely.
 module Development.Ninja.Type(
     Str, FileStr,

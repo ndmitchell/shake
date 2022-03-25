@@ -33,6 +33,6 @@ test store build = do
   build ["--allow-redefine-rules"]
 
   res <- takeMVar store
-  assertBool (res == 2) "Rule was not overriden"
+  assertBool (res == 2) "Rule was not overridden"
 
   assertException ["rule defined twice"] $ build ["--quiet"]

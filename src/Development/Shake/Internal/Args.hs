@@ -91,8 +91,8 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 -- 'shakeArgsWith' opts flags (\\flagValues argValues -> result)
 -- @
 --
--- * @opts@ is the initial 'ShakeOptions' value, which may have some fields overriden by command line flags.
---   This argument is usually 'shakeOptions', perhaps with a few fields overriden.
+-- * @opts@ is the initial 'ShakeOptions' value, which may have some fields overridden by command line flags.
+--   This argument is usually 'shakeOptions', perhaps with a few fields overridden.
 --
 -- * @flags@ is a list of flag descriptions, which either produce a 'String' containing an error
 --   message (typically for flags with invalid arguments, .e.g. @'Left' \"could not parse as int\"@), or a value

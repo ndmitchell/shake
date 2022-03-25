@@ -286,7 +286,7 @@ callStackFromException e = ([], e)
 ---------------------------------------------------------------------
 -- Data.Version
 
--- | A version number that indicates change, not ordering or compatibilty.
+-- | A version number that indicates change, not ordering or compatibility.
 --   Always presented as an 'Int' to the user, but a newtype inside the library for safety.
 newtype Ver = Ver Int
     deriving (Show,Eq,Storable)

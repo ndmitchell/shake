@@ -124,7 +124,7 @@ shakeProfileDatabase (ShakeDatabase use s) file =
 --
 -- * The 'SomeException' values are highly likely to be of type 'ShakeException'.
 --
--- * If you want as many errors as possile in one run set @'shakeStaunch'=True@.
+-- * If you want as many errors as possible in one run set @'shakeStaunch'=True@.
 shakeErrorsDatabase :: ShakeDatabase -> IO [(String, SomeException)]
 shakeErrorsDatabase (ShakeDatabase use s) =
     withOpen use "shakeErrorsDatabase" id $ \_ ->
