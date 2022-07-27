@@ -668,6 +668,11 @@ function cmdData(search) {
         res2.push({ name: i, average: res[i].total / res[i].count, ...res[i] });
     return res2;
 }
+function sorted(arr, f){
+    let arr_ = [...arr]
+    arr_.sort(f)
+    return arr_
+}
 function reportDetails(profile, search) {
     const result = React.createElement("div", { class: "details" });
     const self = new Prop(0);
@@ -692,6 +697,15 @@ function reportDetails(profile, search) {
                 React.createElement("b", null, "Execution time:"),
                 showTime(p.execution)),
             React.createElement("li", null,
+                React.createElement("b", null, "Precise simulation:"),
+                React.createElement("ul", null,
+                    React.createElement("li", null,
+                        React.createElement("b", null, "Finish time:"),
+                        showTime(p.ftime)),
+                    React.createElement("li", null,
+                        React.createElement("b", null, "Discovery time:"),
+                        showTime(p.dtime)))),
+            React.createElement("li", null,
                 React.createElement("b", null, "Traced commands:"),
                 React.createElement("ol", null, p.traces.map(t => React.createElement("li", null,
                     t.command,
@@ -699,8 +713,9 @@ function reportDetails(profile, search) {
                     showTime(t.stop - t.start))))),
             React.createElement("li", null,
                 React.createElement("b", null, "Dependencies:"),
+                React.createElement("span", { class: "note" }, "dependency sets are ordered by finish time (decending)"),
                 React.createElement("ol", null, p.depends.map(ds => React.createElement("li", null,
-                    React.createElement("ul", null, ds.map(d => React.createElement("li", null, f(d)))))))),
+                    React.createElement("ul", null, sorted(ds, (a,b) => profile[b].ftime - profile[a].ftime).map(d => React.createElement("li", null, f(d, false)))))))),
             React.createElement("li", null,
                 React.createElement("b", null, "Things that depend on me:"),
                 React.createElement("ul", null, p.rdepends.map(d => React.createElement("li", null, f(d))))));
@@ -806,6 +821,8 @@ function reportRuleTable(profile, search) {
         { field: "time", label: "Time", width: 75, alignRight: true, show: showTime },
         { field: "etime", label: "ETime", width: 75, alignRight: true, show: showTime },
         { field: "wtime", label: "WTime", width: 75, alignRight: true, show: showTime },
+        { field: "ftime", label: "FTime", width: 75, alignRight: true, show: showTime },
+        { field: "dtime", label: "DTime", width: 75, alignRight: true, show: showTime },
         { field: "untraced", label: "Untraced", width: 100, alignRight: true, show: showTime }
     ];
     return newTable(columns, search.map(s => ruleData(etimes, wtimes, s)), "time", true);
@@ -850,6 +867,8 @@ function ruleData(etimes, wtimes, search) {
         time: ps.map(p => p.execution).sum(),
         etime: ps.map(p => etimes[p.index]).sum(),
         wtime: ps.map(p => wtimes[p.index]).sum(),
+        ftime: ps.map(p => p.ftime).sum(),
+        dtime: ps.map(p => p.dtime).sum(),
         untraced: ps.map(untraced).sum()
     }));
 }
@@ -925,17 +944,22 @@ function reportSummary(profile) {
                 " ",
                 React.createElement("span", { class: "note" }, "average number of commands executing simultaneously in the last build.")),
             React.createElement("li", null,
-                React.createElement("b", null, "Speculative critical path:"),
+                React.createElement("b", null, "Simulated critical path"),
                 " ",
-                showTime(speculativeCriticalPath(profile)),
-                " ",
-                React.createElement("span", { class: "note" }, "how long it would take on infinite CPUs.")),
-            React.createElement("li", null,
-                React.createElement("b", null, "Precise critical path:"),
-                " ",
-                showTime(preciseCriticalPath(profile)),
-                " ",
-                React.createElement("span", { class: "note" }, "critical path not speculatively executing."))));
+                React.createElement("span", { class: "note" }, "minimum time a build would take to run on infinite CPUs"),
+                React.createElement("ul", null,
+                    React.createElement("li", null,
+                        React.createElement("b", null, "Speculative:"),
+                        " ",
+                        showTime(speculativeCriticalPath(profile)),
+                        " ",
+                        React.createElement("span", { class: "note" }, "evaluating consecutive dependency sets in parallel")),
+                    React.createElement("li", null,
+                        React.createElement("b", null, "Precise:"),
+                        " ",
+                        showTime(preciseCriticalPath(profile)),
+                        " ",
+                        React.createElement("span", { class: "note" }, "evaluating consecutive dependency sets in sequence"))))));
 }
 function speculativeCriticalPath(profile) {
     const criticalPath = []; // the critical path to any element
@@ -998,6 +1022,7 @@ function preciseCriticalPath(profile) {
         if (demanded[p.index])
             return;
         demanded[p.index] = true;
+        p.dtime = timestamp
         if (waiting[p.index] === 0)
             running.insertSorted([p.index, timestamp + p.execution], compareSndRev);
         else
@@ -1011,6 +1036,7 @@ function preciseCriticalPath(profile) {
     while (running.length > 0) {
         const [ind, time] = running.pop();
         timestamp = time;
+        profile[ind].ftime = timestamp;
         complete[ind] = true;
         if (oncomplete[ind]) {
             oncomplete[ind]();
