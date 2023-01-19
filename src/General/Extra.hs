@@ -232,7 +232,7 @@ handleSynchronous = handleBool (not . isAsyncException)
 -- System.Directory
 
 doesFileExist_ :: FilePath -> IO Bool
-doesFileExist_ x = doesFileExist x `catchIO` \_ -> pure False
+doesFileExist_ x = (||) <$> doesFileExist x <*> pathIsSymbolicLink x `catchIO` \_ -> pure False
 
 doesDirectoryExist_ :: FilePath -> IO Bool
 doesDirectoryExist_ x = doesDirectoryExist x `catchIO` \_ -> pure False
