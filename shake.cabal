@@ -91,7 +91,7 @@ library
         deepseq >= 1.1,
         directory >= 1.2.7.0,
         extra >= 1.6.19,
-        filepath,
+        filepath >= 1.4,
         filepattern,
         hashable >= 1.1.2.3,
         heaps >= 0.3.6.1,
