@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #836, add threaded flag to disable using threaded runtime
     #837, require filepath-1.14
 0.9.7, released 2022-09-15
     #815, improve corrupt database handling code
