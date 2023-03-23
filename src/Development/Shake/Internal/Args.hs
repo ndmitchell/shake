@@ -54,15 +54,6 @@ shake opts rules = do
         shakeRunDatabase db []
     shakeRunAfter opts after
 
--- | Like 'shake', but takes a 'ShakeDatabase' as an argument. This enables the
--- caller to read the live files from the DB after the build and watch those
--- files for changes.
-shakeUsingDb :: ShakeDatabase -> ShakeOptions -> Rules () -> IO ()
-shakeUsingDb db opts rules = do
-    addTiming "Function shake"
-    (_, after) <- shakeRunDatabase db []
-    shakeRunAfter opts after
-
 -- | Run a build system using command line arguments for configuration.
 --   The available flags are those from 'shakeOptDescrs', along with a few additional
 --   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.
@@ -148,7 +139,7 @@ shakeArgsOptionsWith
     -> [OptDescr (Either String a)]
     -> (ShakeOptions -> [a] -> [String] -> IO (Maybe (ShakeOptions, Rules ())))
     -> IO ()
-shakeArgsOptionsWith baseOpts userOptions rules = do
+shakeArgsOptionsWith baseOpts userOptions getOptsAndRules = do
     addTiming "shakeArgsWith"
     let baseOpts2 = removeOverlap userOptions $ map snd shakeOptsEx
     args <- getArgs
@@ -168,13 +159,6 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                                                   then outputColor (shakeOutput oshakeOpts)
                                                   else shakeOutput oshakeOpts
                                }
-    rules2 <- rules shakeOpts user files
-    let maybeWatch = case rules2 of
-            Nothing -> shakeWithDatabase shakeOpts (return ())
-            Just (shakeOpts', rules') -> if shakeWatch shakeOpts
-                then watch shakeOpts rules'
-                else shakeWithDatabase shakeOpts rules'
-
     let putWhen v msg = when (shakeVerbosity oshakeOpts >= v) $ shakeOutput oshakeOpts v msg
     let putWhenLn v msg = putWhen v $ msg ++ "\n"
     let showHelp long = do
@@ -182,7 +166,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
             (targets, helpSuffix) <- if not long then pure ([], []) else
                 handleSynchronous (\e -> do putWhenLn Info $ "Failure to collect targets: " ++ show e; pure ([], [])) $ do
                     -- run the rules as simply as we can
-                    rs <- rules shakeOpts [] []
+                    rs <- getOptsAndRules shakeOpts [] []
                     case rs of
                         Just (_, rs) -> do
                             xs <- getTargets shakeOpts rs
@@ -238,22 +222,21 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                             appendFile file $ show (t,p) ++ "\n"
                         pure p
             }
-        maybeWatch $ \db -> do
-            (ran,shakeOpts,res) <- redir $ do
-                when printDirectory $ do
-                    curdir <- getCurrentDirectory
-                    putWhenLn Info $ "shake: In directory `" ++ curdir ++ "'"
-                (shakeOpts, ui) <- do
-                    let compact = lastDef No [x | Compact x <- flagsExtra]
-                    use <- if compact == Auto then checkEscCodes else pure $ compact == Yes
-                    if use
-                        then second withThreadSlave <$> compactUI shakeOpts
-                        else pure (shakeOpts, id)
-                ui $ case rules2 of
-                    Nothing -> pure (False, shakeOpts, Right ())
-                    Just (shakeOpts, rules) -> do
-                        res <- try_ $ shakeUsingDb db shakeOpts $
-                            if NoBuild `elem` flagsExtra then
+        redir $ do
+            when printDirectory $ do
+                curdir <- getCurrentDirectory
+                putWhenLn Info $ "shake: In directory `" ++ curdir ++ "'"
+            (shakeOpts, ui) <- do
+                let compact = lastDef No [x | Compact x <- flagsExtra]
+                use <- if compact == Auto then checkEscCodes else pure $ compact == Yes
+                if use
+                    then second withThreadSlave <$> compactUI shakeOpts
+                    else pure (shakeOpts, id)
+            optsAndRules <- getOptsAndRules shakeOpts user files
+            ui $ case optsAndRules of
+                Nothing -> return ()
+                Just (shakeOpts, rules) -> do
+                    let rules2 = if NoBuild `elem` flagsExtra then
                                 withoutActions rules
                             else if ShareList `elem` flagsExtra ||
                                     not (null shareRemoves) ||
@@ -268,22 +251,29 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                                 withoutActions rules
                             else
                                 rules
-                        pure (True, shakeOpts, res)
 
-            if not ran || shakeVerbosity shakeOpts < Info || NoTime `elem` flagsExtra then
-                either throwIO pure res
-            else
-                let esc = if shakeColor shakeOpts then escape else \_ x -> x
-                in case res of
-                    Left err ->
-                        if Exception `elem` flagsExtra then
-                            throwIO err
-                        else do
-                            putWhenLn Error $ esc Red $ show err
-                            exitFailure
-                    Right () -> do
-                        tot <- start
-                        putWhenLn Info $ esc Green $ "Build completed in " ++ showDuration tot
+                    let maybeWatch | shakeWatch shakeOpts = watch
+                                   | otherwise            = shakeWithDatabase
+
+                    maybeWatch shakeOpts rules2 $ \db -> do
+                        res <- try_ $ do
+                            (_, after) <- shakeRunDatabase db []
+                            shakeRunAfter shakeOpts after
+
+                        if shakeVerbosity shakeOpts < Info || NoTime `elem` flagsExtra then
+                            either throwIO pure res
+                        else
+                            let esc = if shakeColor shakeOpts then escape else \_ x -> x
+                            in case res of
+                                Left err ->
+                                    if Exception `elem` flagsExtra then
+                                        throwIO err
+                                    else do
+                                        putWhenLn Error $ esc Red $ show err
+                                        exitFailure
+                                Right () -> do
+                                    tot <- start
+                                    putWhenLn Info $ esc Green $ "Build completed in " ++ showDuration tot
 
 watch :: ShakeOptions -> Rules () -> (ShakeDatabase -> IO ()) -> IO ()
 watch shakeOpts rules build = shakeWithDatabase shakeOpts rules $ \db -> withManager $ \mgr -> do
