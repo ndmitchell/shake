@@ -1,4 +1,5 @@
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Command line parsing flags.
 module Development.Shake.Internal.Args(
@@ -35,7 +36,10 @@ import System.Directory.Extra
 import System.Environment
 import System.Exit
 import System.Time.Extra
-
+import System.FSNotify
+import qualified Data.Set as Set
+import qualified Data.Map.Strict as Map
+import Control.Concurrent.MVar
 
 -- | Main entry point for running Shake build systems. For an example see the top of the module "Development.Shake".
 --   Use 'ShakeOptions' to specify how the system runs, and 'Rules' to specify what to build. The function will throw
@@ -50,6 +54,14 @@ shake opts rules = do
         shakeRunDatabase db []
     shakeRunAfter opts after
 
+-- | Like 'shake', but takes a 'ShakeDatabase' as an argument. This enables the
+-- caller to read the live files from the DB after the build and watch those
+-- files for changes.
+shakeUsingDb :: ShakeDatabase -> ShakeOptions -> Rules () -> IO ()
+shakeUsingDb db opts rules = do
+    addTiming "Function shake"
+    (_, after) <- shakeRunDatabase db []
+    shakeRunAfter opts after
 
 -- | Run a build system using command line arguments for configuration.
 --   The available flags are those from 'shakeOptDescrs', along with a few additional
@@ -156,6 +168,13 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                                                   then outputColor (shakeOutput oshakeOpts)
                                                   else shakeOutput oshakeOpts
                                }
+    rules2 <- rules shakeOpts user files
+    let maybeWatch = case rules2 of
+            Nothing -> shakeWithDatabase shakeOpts (return ())
+            Just (shakeOpts', rules') -> if shakeWatch shakeOpts
+                then watch shakeOpts rules'
+                else shakeWithDatabase shakeOpts rules'
+
     let putWhen v msg = when (shakeVerbosity oshakeOpts >= v) $ shakeOutput oshakeOpts v msg
     let putWhenLn v msg = putWhen v $ msg ++ "\n"
     let showHelp long = do
@@ -219,53 +238,83 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                             appendFile file $ show (t,p) ++ "\n"
                         pure p
             }
-        (ran,shakeOpts,res) <- redir $ do
-            when printDirectory $ do
-                curdir <- getCurrentDirectory
-                putWhenLn Info $ "shake: In directory `" ++ curdir ++ "'"
-            (shakeOpts, ui) <- do
-                let compact = lastDef No [x | Compact x <- flagsExtra]
-                use <- if compact == Auto then checkEscCodes else pure $ compact == Yes
-                if use
-                    then second withThreadSlave <$> compactUI shakeOpts
-                    else pure (shakeOpts, id)
-            rules <- rules shakeOpts user files
-            ui $ case rules of
-                Nothing -> pure (False, shakeOpts, Right ())
-                Just (shakeOpts, rules) -> do
-                    res <- try_ $ shake shakeOpts $
-                        if NoBuild `elem` flagsExtra then
-                            withoutActions rules
-                        else if ShareList `elem` flagsExtra ||
-                                not (null shareRemoves) ||
-                                ShareSanity `elem` flagsExtra then do
-                            action $ do
-                                unless (null shareRemoves) $
-                                    actionShareRemove shareRemoves
-                                when (ShareList `elem` flagsExtra)
-                                    actionShareList
-                                when (ShareSanity `elem` flagsExtra)
-                                    actionShareSanity
-                            withoutActions rules
-                        else
-                            rules
-                    pure (True, shakeOpts, res)
+        maybeWatch $ \db -> do
+            (ran,shakeOpts,res) <- redir $ do
+                when printDirectory $ do
+                    curdir <- getCurrentDirectory
+                    putWhenLn Info $ "shake: In directory `" ++ curdir ++ "'"
+                (shakeOpts, ui) <- do
+                    let compact = lastDef No [x | Compact x <- flagsExtra]
+                    use <- if compact == Auto then checkEscCodes else pure $ compact == Yes
+                    if use
+                        then second withThreadSlave <$> compactUI shakeOpts
+                        else pure (shakeOpts, id)
+                ui $ case rules2 of
+                    Nothing -> pure (False, shakeOpts, Right ())
+                    Just (shakeOpts, rules) -> do
+                        res <- try_ $ shakeUsingDb db shakeOpts $
+                            if NoBuild `elem` flagsExtra then
+                                withoutActions rules
+                            else if ShareList `elem` flagsExtra ||
+                                    not (null shareRemoves) ||
+                                    ShareSanity `elem` flagsExtra then do
+                                action $ do
+                                    unless (null shareRemoves) $
+                                        actionShareRemove shareRemoves
+                                    when (ShareList `elem` flagsExtra)
+                                        actionShareList
+                                    when (ShareSanity `elem` flagsExtra)
+                                        actionShareSanity
+                                withoutActions rules
+                            else
+                                rules
+                        pure (True, shakeOpts, res)
 
-        if not ran || shakeVerbosity shakeOpts < Info || NoTime `elem` flagsExtra then
-            either throwIO pure res
-         else
-            let esc = if shakeColor shakeOpts then escape else \_ x -> x
-            in case res of
-                Left err ->
-                    if Exception `elem` flagsExtra then
-                        throwIO err
-                    else do
-                        putWhenLn Error $ esc Red $ show err
-                        exitFailure
-                Right () -> do
-                    tot <- start
-                    putWhenLn Info $ esc Green $ "Build completed in " ++ showDuration tot
+            if not ran || shakeVerbosity shakeOpts < Info || NoTime `elem` flagsExtra then
+                either throwIO pure res
+            else
+                let esc = if shakeColor shakeOpts then escape else \_ x -> x
+                in case res of
+                    Left err ->
+                        if Exception `elem` flagsExtra then
+                            throwIO err
+                        else do
+                            putWhenLn Error $ esc Red $ show err
+                            exitFailure
+                    Right () -> do
+                        tot <- start
+                        putWhenLn Info $ esc Green $ "Build completed in " ++ showDuration tot
 
+watch :: ShakeOptions -> Rules () -> (ShakeDatabase -> IO ()) -> IO ()
+watch shakeOpts rules build = shakeWithDatabase shakeOpts rules $ \db -> withManager $ \mgr -> do
+    let loop = do
+            sleep 0.1 -- Wait for file writes to finish
+
+            liveFiles <- mapM makeAbsolute =<< shakeLiveFilesDatabase db
+            if null liveFiles then do
+                putStrLn "No files to watch for changes, stopping"
+            else do
+                changeVar <- newEmptyMVar
+                let onChange = putMVar changeVar ()
+                let awaitChange = takeMVar changeVar
+                let dirToFiles = Map.fromListWith Set.union $
+                        map (\abs -> (takeDirectory abs, Set.singleton abs)) liveFiles
+                let startWatchers = forM (Map.toList dirToFiles) $ \(dir, liveFilesInDir) -> do
+                        let isChangeToLiveFile (Modified path _ _) = path `Set.member` liveFilesInDir
+                            isChangeToLiveFile _                   = False
+                        watchDir mgr dir isChangeToLiveFile $ \_ -> onChange
+                let stopWatchers stopFns = sequence stopFns
+                let watchForChange = bracket startWatchers stopWatchers $ \_ -> do
+                        putStrLn "Watching for file changes... 👀"
+                        awaitChange
+
+                watchForChange
+                build db
+                loop
+
+    catch
+        (build db >> loop) -- Do an initial build, then enter a loop that watches for changes before rebuilding
+        (\(_ :: ExitCode) -> loop) -- Keep going if the build fails, but exit if the user presses Ctrl-C
 
 -- | A list of command line options that can be used to modify 'ShakeOptions'. Each option returns
 --   either an error message (invalid argument to the flag) or a function that changes some fields
@@ -290,6 +339,7 @@ data Extra = ChangeDirectory FilePath
            | ShareSanity
            | ShareRemove String
            | Compact Auto
+           | Watch
              deriving Eq
 
 data Auto = Yes | No | Auto
@@ -367,6 +417,7 @@ shakeOptsEx =
     ,extr $ Option "v" ["version"] (noArg [Version]) "Print the version number and exit."
     ,extr $ Option "w" ["print-directory"] (noArg [PrintDirectory True]) "Print the current directory."
     ,extr $ Option ""  ["no-print-directory"] (noArg [PrintDirectory False]) "Turn off -w, even if it was turned on implicitly."
+    ,opts $ Option ""  ["watch"] (noArg $ \s -> s{shakeWatch=True}) "Watch for changes and rebuild."
     ]
     where
         opts o = (True, fmapFmapOptDescr ([],) o)
