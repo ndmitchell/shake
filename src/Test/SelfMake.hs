@@ -45,7 +45,7 @@ main = testBuild (notWindowsCI . defaultTest) $ do
 
         trackAllow ["**/*.o","**/*.hi","Makefile"]
         ghc $ ["-M",run] ++ flags
-        need . filter (\x -> takeExtension x == ".hs") . concatMap snd . parseMakefile =<< liftIO (readFile "Makefile")
+        need . concatMap (filter (\x -> takeExtension x == ".hs") . snd) . parseMakefile =<< liftIO (readFile "Makefile")
         ghc $ ["-o",out,run,"-j4"] ++ flags
 
     ".pkgs" %> \out -> do
