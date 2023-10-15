@@ -14,6 +14,7 @@ import Control.Monad
 import Data.Binary
 import Data.List.Extra
 import Data.Tuple.Extra
+import Foreign.Marshal.Utils
 import Foreign.Storable
 import Foreign.Ptr
 import System.IO.Unsafe as U
@@ -91,7 +92,7 @@ class BinaryEx a where
     getEx :: BS.ByteString -> a
 
 instance BinaryEx BS.ByteString where
-    putEx x = Builder n $ \ptr i -> BS.useAsCString x $ \bs -> BS.memcpy (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
+    putEx x = Builder n $ \ptr i -> BS.useAsCString x $ \bs -> copyBytes (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
         where n = BS.length x
     getEx = id
 
@@ -100,7 +101,7 @@ instance BinaryEx LBS.ByteString where
         let go _ [] = pure ()
             go i (x:xs) = do
                 let n = BS.length x
-                BS.useAsCString x $ \bs -> BS.memcpy (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
+                BS.useAsCString x $ \bs -> copyBytes (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
                 go (i+n) xs
         go i $ LBS.toChunks x
     getEx = LBS.fromChunks . pure
@@ -115,7 +116,7 @@ instance BinaryEx [BS.ByteString] where
         for2M_ [4+i,8+i..] ns $ \i x -> pokeByteOff p i (fromIntegral x :: Word32)
         p<- pure $ p `plusPtr` (i + 4 + (n * 4))
         for2M_ (scanl (+) 0 ns) xs $ \i x -> BS.useAsCStringLen x $ \(bs, n) ->
-            BS.memcpy (p `plusPtr` i) (castPtr bs) (fromIntegral n)
+            copyBytes (p `plusPtr` i) (castPtr bs) (fromIntegral n)
         where ns = map BS.length xs
               n = length ns
 
