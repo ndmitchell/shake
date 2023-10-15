@@ -1,4 +1,4 @@
-# Shake [![Hackage version](https://img.shields.io/hackage/v/shake.svg?label=Hackage)](https://hackage.haskell.org/package/shake) [![Stackage version](https://www.stackage.org/package/shake/badge/nightly?label=Stackage)](https://www.stackage.org/package/shake) [![Build status](https://img.shields.io/github/workflow/status/ndmitchell/shake/ci/master.svg)](https://github.com/ndmitchell/shake/actions)
+# Shake [![Hackage version](https://img.shields.io/hackage/v/shake.svg?label=Hackage)](https://hackage.haskell.org/package/shake) [![Stackage version](https://www.stackage.org/package/shake/badge/nightly?label=Stackage)](https://www.stackage.org/package/shake) [![Build status](https://img.shields.io/github/actions/workflow/status/ndmitchell/shake/ci.yml?branch=master)](https://github.com/ndmitchell/shake/actions)
 
 Shake is a tool for writing build systems - an alternative to make, Scons, Ant etc. Shake has been used commercially for over five years, running thousands of builds per day. The website for Shake users is at [shakebuild.com](https://shakebuild.com).
 
