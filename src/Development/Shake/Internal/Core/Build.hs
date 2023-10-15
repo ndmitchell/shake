@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards, PatternGuards, ScopedTypeVariables, NamedFieldPuns, GADTs #-}
-{-# LANGUAGE Rank2Types, ConstraintKinds, TupleSections, ViewPatterns #-}
+{-# LANGUAGE Rank2Types, ConstraintKinds, TypeOperators, TupleSections, ViewPatterns #-}
 
 module Development.Shake.Internal.Core.Build(
     getDatabaseValue, getDatabaseValueGeneric,

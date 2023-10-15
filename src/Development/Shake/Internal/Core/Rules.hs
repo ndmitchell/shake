@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, ConstraintKinds, NamedFieldPuns #-}
 {-# LANGUAGE ExistentialQuantification, RankNTypes #-}
-{-# LANGUAGE TypeFamilies, DeriveDataTypeable #-}
+{-# LANGUAGE TypeFamilies, TypeOperators, DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Development.Shake.Internal.Core.Rules(
