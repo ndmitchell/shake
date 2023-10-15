@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, ConstraintKinds, ScopedTypeVariables #-}
-{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveDataTypeable, TypeOperators, GeneralizedNewtypeDeriving #-}
 
 module Test.Oracle(main) where
 
