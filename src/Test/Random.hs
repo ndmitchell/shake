@@ -106,7 +106,7 @@ test build = do
                 build $ ("-j" ++ show j) : map ((++) "--arg=" . show) (xs ++ map Want wants)
 
                 let value i =
-                        let ys = head [ys | Logic j ys <- xs, j == i]
+                        let ys = headErr [ys | Logic j ys <- xs, j == i]
                         in Multiple $ flip map ys $ map $ \case
                             Input i -> Single $ if i `elem` negated then negate i else i
                             Output i -> value i

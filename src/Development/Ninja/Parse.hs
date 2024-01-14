@@ -7,6 +7,7 @@ import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Lexer
 import Control.Monad
+import General.Extra
 
 
 parse :: FilePath -> Env Str Str -> IO Ninja
@@ -37,7 +38,7 @@ applyStmt env ninja@Ninja{..} (key, binds) = case key of
         let build = Build rule env normal implicit orderOnly binds
         pure $
             if rule == BS.pack "phony" then ninja{phonys = [(x, normal ++ implicit ++ orderOnly) | x <- outputs] ++ phonys}
-            else if length outputs == 1 then ninja{singles = (head outputs, build) : singles}
+            else if length outputs == 1 then ninja{singles = (headErr outputs, build) : singles}
             else ninja{multiples = (outputs, build) : multiples}
     LexRule name ->
         pure ninja{rules = (name, Rule binds) : rules}

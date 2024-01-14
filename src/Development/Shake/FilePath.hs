@@ -15,6 +15,7 @@ module Development.Shake.FilePath(
 import System.Directory (canonicalizePath)
 import System.Info.Extra
 import Data.List.Extra
+import Data.Maybe
 import qualified System.FilePath as Native
 
 import System.FilePath hiding
@@ -128,8 +129,8 @@ normaliseEx xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) --
                 (True,False) -> "/."
                 (False,True) -> "./"
                 (False,False) -> "."
-            | otherwise = (if pre then id else tail) $ (if pos then id else init) x
-            where pre = sep $ head $ o ++ " "
+            | otherwise = (if pre then id else drop 1) $ (if pos then id else init) x
+            where pre = sep $ fromMaybe ' ' $ listToMaybe o
                   pos = sep $ last $ " " ++ o
 
         g i [] = replicate i ".."

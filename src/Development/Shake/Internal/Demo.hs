@@ -41,7 +41,7 @@ demo auto = do
     dir <- if empty then getCurrentDirectory else do
         home <- getHomeDirectory
         dir <- getDirectoryContents home
-        pure $ home </> head (map ("shake-demo" ++) ("":map show [2..]) \\ dir)
+        pure $ home </> headErr (map ("shake-demo" ++) ("":map show [2..]) \\ dir)
 
     putStrLn "% The Shake demo uses an empty directory, OK to use:"
     putStrLn $ "%     " ++ dir

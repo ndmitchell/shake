@@ -22,7 +22,7 @@ import Data.List.Extra
 import System.Info.Extra
 
 -- Internal imports
-import General.Extra(removeFile_)
+import General.Extra(removeFile_, headErr)
 import General.Timing(addTiming)
 import General.Makefile(parseMakefile)
 import Development.Shake.Internal.FileName(filepathNormalise, fileNameFromString)
@@ -83,7 +83,7 @@ runNinja restart file args Nothing = do
                     else Map.keys singles ++ Map.keys multiples
 
         (\x -> map BS.unpack . fst <$> Map.lookup (BS.pack x) multiples) &?> \out -> let out2 = map BS.pack out in
-            build needDeps phonys rules pools out2 $ snd $ multiples Map.! head out2
+            build needDeps phonys rules pools out2 $ snd $ multiples Map.! headErr out2
 
         (flip Map.member singles . BS.pack) ?> \out -> let out2 = BS.pack out in
             build needDeps phonys rules pools [out2] $ singles Map.! out2

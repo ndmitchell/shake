@@ -583,7 +583,7 @@ batch mx pred one many
                 res <- Action $ tryRAW $ do
                     -- make sure we are using one of the local's that we are computing
                     -- we things like stack, blockApply etc. work as expected
-                    modifyRW $ const $ localClearMutable $ snd3 $ head now
+                    modifyRW $ const $ localClearMutable $ snd3 $ headErr now
                     start <- liftIO offsetTime
                     fromAction $ many $ map fst3 now
                     end <- liftIO start

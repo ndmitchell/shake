@@ -5,12 +5,13 @@ import           Development.Shake.Internal.FileInfo (getFileInfo)
 import           Development.Shake.Internal.FileName (fileNameFromString)
 import           System.Directory                    (getCurrentDirectory)
 import           System.FilePath                     ((</>))
+import General.Extra
 
 main :: IO () -> IO ()
 main _ = do
     cwd <- getCurrentDirectory
     someFiles <- getDirectoryFilesIO cwd ["*"]
-    let someFile = head someFiles
+    let someFile = headErr someFiles
     assertIsJust $ getFileInfo False $ fileNameFromString someFile
 
     let fileThatCantExist = someFile </> "fileThatCantExist"

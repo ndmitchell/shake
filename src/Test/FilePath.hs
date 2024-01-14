@@ -13,6 +13,7 @@ import qualified Development.Shake.Internal.FileName as BS
 import System.Info.Extra
 import System.Directory
 import qualified System.IO.Extra as IO
+import General.Extra
 
 
 newtype File = File String deriving Show
@@ -68,7 +69,7 @@ main = testSimple $ do
             sep = Native.isPathSeparator
             noDrive = if isWindows then drop1 else id
             ps = [y /= ""
-                 ,null x || (sep (head x) == sep (head y) && sep (last x) == sep (last y))
+                 ,null x || (sep (headErr x) == sep (headErr y) && sep (last x) == sep (last y))
                  ,not $ "/./" `isInfixOf` y
                  ,not isWindows || '\\' `notElem` y
                  ,not $ "//" `isInfixOf` noDrive y

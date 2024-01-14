@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, ConstraintKinds, GeneralizedNewtypeDeriving, ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-x-partial -Wno-unrecognised-warning-flags #-}
 
 module General.Extra(
     getProcessorCount,
@@ -10,6 +11,7 @@ module General.Extra(
     maximum', maximumBy',
     unconcat,
     fastAt,
+    headErr, tailErr,
     zipExact, zipWithExact,
     isAsyncException,
     showDurationSecs,
@@ -69,6 +71,12 @@ unconcat :: [[a]] -> [b] -> [[b]]
 unconcat [] _ = []
 unconcat (a:as) bs = b1 : unconcat as b2
     where (b1,b2) = splitAt (length a) bs
+
+headErr :: [a] -> a
+headErr = head
+
+tailErr :: [a] -> [a]
+tailErr = tail
 
 
 ---------------------------------------------------------------------

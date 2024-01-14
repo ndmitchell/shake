@@ -165,7 +165,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
 ps &%> act
     | not $ compatible ps = error $ unlines $
         "All patterns to &%> must have the same number and position of ** and * wildcards" :
-        ["* " ++ p ++ (if compatible [p, head ps] then "" else " (incompatible)") | p <- ps]
+        ["* " ++ p ++ (if compatible [p, headErr ps] then "" else " (incompatible)") | p <- ps]
     | otherwise = withFrozenCallStack $ do
         forM_ (zipFrom 0 ps) $ \(i,p) ->
             (if simple p then id else priority 0.5) $

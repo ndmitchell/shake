@@ -244,7 +244,7 @@ apply ks =
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
 --   use 'apply' to allow parallelism.
 apply1 :: (Partial, RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
-apply1 = withFrozenCallStack $ fmap head . apply . pure
+apply1 = withFrozenCallStack $ fmap headErr . apply . pure
 
 
 

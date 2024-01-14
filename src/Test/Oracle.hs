@@ -12,6 +12,7 @@ import Data.Tuple.Extra
 import Test.Type hiding (RandomType)
 import qualified Test.Type as T
 import Control.Monad
+import General.Extra
 
 
 -- These are instances we'll compute over
@@ -32,7 +33,7 @@ type instance RuleResult RandomType = Int
 type instance RuleResult T.RandomType = Int
 
 data Define = Define String String -- this type produces this result
-opt = [Option "" ["def"] (ReqArg (Right . uncurry Define . second tail . breakOn "=") "type=value") ""]
+opt = [Option "" ["def"] (ReqArg (Right . uncurry Define . second tailErr . breakOn "=") "type=value") ""]
 
 main = testBuildArgs test opt $ \args -> do
     addOracle $ \(T.RandomType _) -> pure 42

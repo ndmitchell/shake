@@ -5,6 +5,7 @@ import Development.Shake.Internal.Options
 import Test.Type
 import System.Directory.Extra
 import System.FilePath
+import General.Extra
 
 
 main = testBuild test $ pure ()
@@ -17,8 +18,8 @@ prog = progEx 10000000000000000
 progEx :: Double -> [Double] -> IO [Double]
 progEx mxDone todo = do
     let resolution = 10000 -- Use resolution to get extra detail on the numbers
-    let done = scanl (+) 0 $ map (min mxDone . max 0) $ zipWith (-) todo (tail todo)
-    let res = progressReplay $ zip (map (*resolution) [1..]) $ tail $ zipWith (\t d -> mempty{timeBuilt=d*resolution,timeTodo=(t*resolution,0)}) todo done
+    let done = scanl (+) 0 $ map (min mxDone . max 0) $ zipWith (-) todo (tailErr todo)
+    let res = progressReplay $ zip (map (*resolution) [1..]) $ tailErr $ zipWith (\t d -> mempty{timeBuilt=d*resolution,timeTodo=(t*resolution,0)}) todo done
     pure $ (0/0) : map ((/ resolution) . actualSecs) res
 
 
@@ -40,7 +41,7 @@ test build = do
 
     -- the first value must be plausible, or missing
     xs <- prog [187]
-    assertBool (isNaN $ head xs) "No first value"
+    assertBool (isNaN $ headErr xs) "No first value"
 
     -- desirable properties, could be weakened
     xs <- progEx 2 $ 100:map (*2) [10,9..1]

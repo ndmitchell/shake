@@ -401,8 +401,8 @@ shakeOptsEx =
             _ -> Left $ "the `--" ++ flag ++ "' option requires an = in the argument"
 
         progress (OptArg func msg) = flip OptArg msg $ \x -> case break (== '=') `fmap` x of
-            Just ("record",file) -> Right ([ProgressRecord $ if null file then "progress.txt" else tail file], id)
-            Just ("replay",file) -> Right ([ProgressReplay $ if null file then "progress.txt" else tail file], id)
+            Just ("record",file) -> Right ([ProgressRecord $ if null file then "progress.txt" else tailErr file], id)
+            Just ("replay",file) -> Right ([ProgressReplay $ if null file then "progress.txt" else tailErr file], id)
             _ -> ([],) <$> func x
         progress _ = throwImpure $ errorInternal "incomplete pattern, progress"
 
