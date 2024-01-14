@@ -1,10 +1,10 @@
 module Test.Existence(main) where
 
-import           Development.Shake                   (getDirectoryFilesIO)
-import           Development.Shake.Internal.FileInfo (getFileInfo)
-import           Development.Shake.Internal.FileName (fileNameFromString)
-import           System.Directory                    (getCurrentDirectory)
-import           System.FilePath                     ((</>))
+import Development.Shake
+import Development.Shake.Internal.FileInfo
+import Development.Shake.Internal.FileName
+import System.Directory
+import System.FilePath
 import General.Extra
 
 main :: IO () -> IO ()
