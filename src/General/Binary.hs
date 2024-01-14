@@ -92,7 +92,7 @@ class BinaryEx a where
     getEx :: BS.ByteString -> a
 
 instance BinaryEx BS.ByteString where
-    putEx x = Builder n $ \ptr i -> BS.useAsCString x $ \bs -> copyBytes (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
+    putEx x = Builder n $ \ptr i -> BS.unsafeUseAsCString x $ \bs -> copyBytes (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
         where n = BS.length x
     getEx = id
 
@@ -101,7 +101,7 @@ instance BinaryEx LBS.ByteString where
         let go _ [] = pure ()
             go i (x:xs) = do
                 let n = BS.length x
-                BS.useAsCString x $ \bs -> copyBytes (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
+                BS.unsafeUseAsCString x $ \bs -> copyBytes (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
                 go (i+n) xs
         go i $ LBS.toChunks x
     getEx = LBS.fromChunks . pure
@@ -115,12 +115,12 @@ instance BinaryEx [BS.ByteString] where
         pokeByteOff p i (fromIntegral n :: Word32)
         for2M_ [4+i,8+i..] ns $ \i x -> pokeByteOff p i (fromIntegral x :: Word32)
         p<- pure $ p `plusPtr` (i + 4 + (n * 4))
-        for2M_ (scanl (+) 0 ns) xs $ \i x -> BS.useAsCStringLen x $ \(bs, n) ->
+        for2M_ (scanl (+) 0 ns) xs $ \i x -> BS.unsafeUseAsCStringLen x $ \(bs, n) ->
             copyBytes (p `plusPtr` i) (castPtr bs) (fromIntegral n)
         where ns = map BS.length xs
               n = length ns
 
-    getEx bs = unsafePerformIO $ BS.useAsCString bs $ \p -> do
+    getEx bs = unsafePerformIO $ BS.unsafeUseAsCString bs $ \p -> do
         n <- fromIntegral <$> (peekByteOff p 0 :: IO Word32)
         ns :: [Word32] <- forM [1..fromIntegral n] $ \i -> peekByteOff p (i * 4)
         pure $ snd $ mapAccumL (\bs i -> swap $ BS.splitAt (fromIntegral i) bs) (BS.drop (4 + (n * 4)) bs) ns
@@ -176,7 +176,7 @@ putExStorable :: forall a . Storable a => a -> Builder
 putExStorable x = Builder (sizeOf x) $ \p i -> pokeByteOff p i x
 
 getExStorable :: forall a . Storable a => BS.ByteString -> a
-getExStorable = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) ->
+getExStorable = \bs -> unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, size) ->
         if size /= n then error "size mismatch" else peek (castPtr p)
     where n = sizeOf (undefined :: a)
 
@@ -187,7 +187,7 @@ putExStorableList xs = Builder (n * length xs) $ \ptr i ->
     where n = sizeOf (undefined :: a)
 
 getExStorableList :: forall a . Storable a => BS.ByteString -> [a]
-getExStorableList = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) ->
+getExStorableList = \bs -> unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, size) ->
     let (d,m) = size `divMod` n in
     if m /= 0 then error "size mismatch" else forM [0..d-1] $ \i -> peekElemOff (castPtr p) i
     where n = sizeOf (undefined :: a)
