@@ -18,7 +18,8 @@ newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData
 type instance RuleResult GhcPkg = [String]
 type instance RuleResult GhcFlags = [String]
 
-main = testBuild (notWindowsCI . defaultTest) $ do
+-- Doesn't work on CI, seems self-building under `cabal test` is just hard
+main = testBuild (notCI . defaultTest) $ do
     want ["Main" <.> exe]
 
     ghcPkg <- addOracleHash $ \GhcPkg{} -> do
