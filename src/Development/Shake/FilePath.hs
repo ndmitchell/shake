@@ -129,7 +129,7 @@ normaliseEx xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) --
                 (True,False) -> "/."
                 (False,True) -> "./"
                 (False,False) -> "."
-            | otherwise = (if pre then id else drop 1) $ (if pos then id else init) x
+            | otherwise = (if pre then id else drop1) $ (if pos then id else init) x
             where pre = sep $ fromMaybe ' ' $ listToMaybe o
                   pos = sep $ last $ " " ++ o
 
