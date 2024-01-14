@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies, ConstraintKinds, ScopedTypeVariables #-}
 {-# LANGUAGE DeriveDataTypeable, TypeOperators, GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Oracle(main) where
 
