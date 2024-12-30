@@ -1,5 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, ConstraintKinds, GeneralizedNewtypeDeriving, ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-x-partial -Wno-unrecognised-warning-flags #-}
+{-# OPTIONS_GHC -Wno-x-partial -Wno-unrecognised-warning-flags -Wno-deprecations #-}
+-- ErrorCallWithLocation is deprecated in GHC 9.12, need to shift away from it sooner or later
 
 module General.Extra(
     getProcessorCount,
