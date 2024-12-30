@@ -206,7 +206,7 @@ ruleIdentity _ = \k v -> case answer v of
     Nothing -> Nothing
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
-ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) oldBin@(fmap getEx -> old :: Maybe Answer) mode = do
+ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) oldBin@(fmap getEx -> (old :: Maybe Answer)) mode = do
     -- for One, rebuild makes perfect sense
     -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
     -- for Phony, it doesn't make that much sense, but probably isn't harmful?
