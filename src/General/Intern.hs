@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-} -- Required since foldl' moves to the prelude
 
 module General.Intern(
     Intern, Id(..),
