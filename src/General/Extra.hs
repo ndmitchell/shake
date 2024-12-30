@@ -1,6 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, GeneralizedNewtypeDeriving, ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-x-partial -Wno-unrecognised-warning-flags -Wno-deprecations #-}
--- ErrorCallWithLocation is deprecated in GHC 9.12, need to shift away from it sooner or later
+{-# LANGUAGE CPP, ScopedTypeVariables, ConstraintKinds, GeneralizedNewtypeDeriving, ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-x-partial -Wno-unrecognised-warning-flags #-}
 
 module General.Extra(
     getProcessorCount,
@@ -288,7 +287,9 @@ parseCallStack = reverse . map trimStart . drop1 . lines
 
 callStackFull = parseCallStack $ prettyCallStack $ popCallStack callStack
 
+#if __GLASGOW_HASKELL__ < 912
 callStackFromException (fromException -> Just (ErrorCallWithLocation msg loc)) = (parseCallStack loc, toException $ ErrorCall msg)
+#endif
 callStackFromException e = ([], e)
 
 
