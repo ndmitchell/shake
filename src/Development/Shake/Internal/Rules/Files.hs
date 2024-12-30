@@ -90,7 +90,7 @@ ruleIdentity _ = \_ (FilesA files) ->
 
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FilesQ FilesA
-ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
+ruleRun opts rebuildFlags k o@(fmap getEx -> (old :: Maybe Result)) mode = do
     let r = map (rebuildFlags . fileNameToString . fromFileQ) $ fromFilesQ k
 
     (ruleVer, ruleAct, ruleErr) <- getUserRuleInternal k (\(FilesRule s _) -> Just s) $ \(FilesRule _ f) -> f k
