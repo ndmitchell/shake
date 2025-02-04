@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes          #-}
 
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Thread(
@@ -14,6 +15,7 @@ import Control.Concurrent.Extra
 import Control.Exception
 import General.Extra
 import Control.Monad.Extra
+import GHC.Conc
 
 
 data Thread = Thread ThreadId (Barrier ())
@@ -25,15 +27,21 @@ instance Hashable Thread where
     hashWithSalt salt (Thread a _) = hashWithSalt salt a
 
 -- | The inner thread is unmasked even if you started masked.
-newThreadFinally :: IO a -> (Thread -> Either SomeException a -> IO ()) -> IO Thread
-newThreadFinally act cleanup = do
+newThreadFinally :: String -> Maybe Int -> IO a -> (Thread -> Either SomeException a -> IO ()) -> IO Thread
+newThreadFinally label mcap act cleanup = do
     bar <- newBarrier
-    t <- mask_ $ forkIOWithUnmask $ \unmask -> flip finally (signalBarrier bar ()) $ do
-        res <- try $ unmask act
+    t <- mask_ $ fork $ \unmask -> flip finally (signalBarrier bar ()) $ do
         me <- myThreadId
+        res <- try $ unmask act
         cleanup (Thread me bar) res
+    labelThread t $ label ++ labeltype
     pure $ Thread t bar
-
+  where
+    labeltype = maybe "(Free)" (\i -> "(Restricted to "++show i++")") mcap
+    fork :: ((forall a. IO a -> IO a) -> IO ()) -> IO ThreadId
+    fork = case mcap of
+      Nothing -> forkIOWithUnmask
+      Just n -> forkOnWithUnmask n
 
 stopThreads :: [Thread] -> IO ()
 stopThreads threads = do
