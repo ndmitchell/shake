@@ -60,8 +60,14 @@ import Prelude
 --   To raise an exception call 'error', 'fail' or @'liftIO' . 'throwIO'@.
 --
 --   The 'Action' type is both a 'Monad' and 'Applicative'. Anything that is depended upon applicatively
---   will have its dependencies run in parallel. For example @'need' [\"a\"] *> 'need [\"b\"]@ is equivalent
---   to @'need' [\"a\", \"b\"]@.
+--   will have its dependencies run in parallel. For example,
+--   @'Development.Shake.Internal.Rules.File.need' [\"a\"] '*>' 'Development.Shake.Internal.Rules.File.need' [\"b\"]@
+--   is equivalent to @'need' [\"a\", \"b\"]@.
+--
+--   Note that since Shake 0.18, the non-capturing monadic bind ('>>') will also run its dependencies in parallel.
+--   For example,
+--   @'Development.Shake.Internal.Rules.File.need' [\"a\"] '>>' 'Development.Shake.Internal.Rules.File.need' [\"b\"]@
+--   is also equivalent to @'Development.Shake.Internal.Rules.File.need' [\"a\", \"b\"]@.
 newtype Action a = Action {fromAction :: RAW ([String],[Key]) [Value] Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO, Typeable, Semigroup, Monoid, MonadFail)
 

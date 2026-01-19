@@ -371,8 +371,13 @@ fileForward help act = addUserRule $ FileRule help $ fmap ModeForward . act
 --     'Development.Shake.cmd' \"rot13\" [src] \"-o\" [out]
 -- @
 --
---   Usually @need [foo,bar]@ is preferable to @need [foo] >> need [bar]@ as the former allows greater
---   parallelism, while the latter requires @foo@ to finish building before starting to build @bar@.
+--   Note that the following expressions are all equivalent. @foo@ and @bar@ are built in parallel:
+--
+--   - @need [foo,bar]@
+--   - @need [foo] '*>' need [bar]@
+--   - @need [foo] '>>' need [bar]@
+--
+--   In this situation, @need [foo, bar]@ is preferable, since the parallelism is the most obvious.
 --
 --   This function should not be called with wildcards (e.g. @*.txt@ - use 'getDirectoryFiles' to expand them),
 --   environment variables (e.g. @$HOME@ - use 'getEnv' to expand them) or directories (directories cannot be
