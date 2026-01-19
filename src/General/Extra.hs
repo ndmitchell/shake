@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, ScopedTypeVariables, ConstraintKinds, GeneralizedNewtypeDeriving, ViewPatterns #-}
+{-# LANGUAGE CPP, ScopedTypeVariables, ConstraintKinds, GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-x-partial -Wno-unrecognised-warning-flags #-}
 
 module General.Extra(
@@ -288,7 +288,7 @@ parseCallStack = reverse . map trimStart . drop1 . lines
 callStackFull = parseCallStack $ prettyCallStack $ popCallStack callStack
 
 #if __GLASGOW_HASKELL__ < 912
-callStackFromException (fromException -> Just (ErrorCallWithLocation msg loc)) = (parseCallStack loc, toException $ ErrorCall msg)
+callStackFromException e | Just (ErrorCallWithLocation msg loc) <- fromException e = (parseCallStack loc, toException $ ErrorCall msg)
 #endif
 callStackFromException e = ([], e)
 
