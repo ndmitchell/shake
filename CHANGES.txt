@@ -1,7 +1,7 @@
 Changelog for Shake (* = breaking change)
 
     Test with GHC 9.12, improving some errors
-0.19.8, released 2024, 2024-01-14
+0.19.8, released 2024-01-14
     Test with GHC 9.8
     #844, optimise database reading/writing with use unsafeUseAsCString
     #836, add threaded flag to disable using threaded runtime
