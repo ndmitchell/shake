@@ -216,6 +216,8 @@ data ShakeOptions = ShakeOptions
         --   undefined results. Provided for compatibility with @ninja@.
     ,shakeAllowRedefineRules :: Bool
         -- ^ Whether to allow calling addBuiltinRule for the same key more than once
+    ,shakeWatch :: Bool
+        -- ^ Defaults to @False@. Whether to watch for file changes and rebuild.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
         --   The function is called on a separate thread, and that thread is killed when the build completes.
@@ -240,7 +242,7 @@ data ShakeOptions = ShakeOptions
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
     ".shake" 1 "1" Info False [] Nothing [] [] [] [] (Just 10) [] [] False True False
-    True ChangeModtime True [] False False Nothing [] False False False
+    True ChangeModtime True [] False False Nothing [] False False False False
     (const $ pure ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
     (\_ _ _ -> pure ())
@@ -252,20 +254,20 @@ fieldsShakeOptions =
     ,"shakeFlush", "shakeRebuild", "shakeAbbreviations", "shakeStorageLog"
     ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck"
     ,"shakeLiveFiles", "shakeVersionIgnore", "shakeColor", "shakeShare", "shakeCloud", "shakeSymlink"
-    ,"shakeNeedDirectory", "shakeCanRedefineRules"
+    ,"shakeNeedDirectory", "shakeCanRedefineRules", "shakeWatch"
     ,"shakeProgress", "shakeOutput", "shakeTrace", "shakeExtra"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 y1 y2 y3 y4 =
-  ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 x29 y1 y2 y3 y4 =
+  ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 x29
         (fromHidden y1) (fromHidden y2) (fromHidden y3) (fromHidden y4)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 y1 y2 y3 y4) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 x29 y1 y2 y3 y4) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
-        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k` x23 `k` x24 `k` x25 `k` x26 `k` x27 `k` x28 `k`
+        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k` x23 `k` x24 `k` x25 `k` x26 `k` x27 `k` x28 `k` x29 `k`
         Hidden y1 `k` Hidden y2 `k` Hidden y3 `k` Hidden y4
-    gunfold k z _ = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gunfold k z _ = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
