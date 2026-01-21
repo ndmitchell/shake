@@ -51,6 +51,7 @@ import Prelude
 
 import Development.Shake.Internal.CmdOption
 import Development.Shake.Internal.Core.Action
+import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Types hiding (Result)
 import Development.Shake.FilePath
 import Development.Shake.Internal.Options
@@ -313,18 +314,22 @@ commandExplicitAction oparams = do
 
         autodeps act = do
             ResultFSATrace pxs : res <- act params{opts = addFSAOptions "rwm" opts, results = ResultFSATrace [] : results}
+            Local{localProduces} <- Action getRW
             let written = Set.fromList $ [x | FSAMove x _ <- pxs] ++ [x | FSAWrite x <- pxs]
             -- If something both reads and writes to a file, it isn't eligible to be an autodeps
             xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs, not $ x `Set.member` written]
             cwd <- liftIO getCurrentDirectory
             temp <- fixPaths cwd xs
-            unsafeAllowApply $ need temp
+            -- Outputs can't be autodeps.
+            let outputs = Set.fromList $ snd <$> localProduces
+                inputs = filter (not . (`Set.member` outputs)) temp
+            unsafeAllowApply $ need inputs
             pure res
 
         fixPaths cwd xs = liftIO $ do
-            xs<- pure $ map toStandard xs
-            xs<- pure $ filter (\x -> any (`isPrefixOf` x) shakeLintInside) xs
-            mapM (\x -> fromMaybe x <$> makeRelativeEx cwd x) xs
+            let standard = map toStandard xs
+                inside = filter (\x -> any (`isPrefixOf` x) shakeLintInside) standard
+            mapM (\x -> fromMaybe x <$> makeRelativeEx cwd x) inside
 
         fsalint act = do
             ResultFSATrace xs : res <- act params{opts = addFSAOptions "rwm" opts, results = ResultFSATrace [] : results}
