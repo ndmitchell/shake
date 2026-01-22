@@ -3,7 +3,7 @@
 -- | Progress tracking
 module Development.Shake.Internal.Progress(
     progress,
-    progressSimple, progressDisplay, progressTitlebar, progressProgram,
+    progressSimple, progressDisplay, progressTitlebar, progressProgram, progressTracker,
     ProgressEntry(..), progressReplay, writeProgressReport -- INTERNAL USE ONLY
     ) where
 
@@ -226,6 +226,17 @@ progressDisplay sample disp prog = do
                 ", predicted " ++ formatMessage secs perc ++
                 maybe "" (", Failure! " ++) (isFailure p)
             loop time mealy
+
+progressTracker :: Double -> (Progress -> IO ()) -> IO Progress -> IO ()
+progressTracker sample progHandler prog = do
+  catchJust (\x -> if x == ThreadKilled then Just () else Nothing) go errHandler
+  where
+    go = do
+      p <- prog
+      progHandler p
+      sleep sample
+      go
+    errHandler = const $ prog >>= progHandler
 
 
 data ProgressEntry = ProgressEntry
