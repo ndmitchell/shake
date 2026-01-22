@@ -17,7 +17,7 @@ module Development.Shake.Command(
     command, command_, cmd, cmd_, unit, CmdArgument(..), CmdArguments(..), IsCmdArgument(..), (:->),
     Stdout(..), StdoutTrim(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..), FSATrace(..),
     CmdResult, CmdString, CmdOption(..),
-    addPath, addEnv,
+    addPath, addEnv, CommandIOException(..)
     ) where
 
 import Data.Tuple.Extra
@@ -417,15 +417,32 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
             Just v -> do
                 v <- canonicalizePath v `catchIO` const (pure v)
                 pure $ "Current directory: " ++ v ++ "\n"
-        liftIO $ errorIO $
-            "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-            "Command line: " ++ optRealCommand ++ "\n" ++
-            (if optRealCommand /= optUserCommand then "Original command line: " ++ optUserCommand ++ "\n" else "") ++
-            cwd ++
-            "Exit code: " ++ show (case exit of ExitFailure i -> i; _ -> 0) ++ "\n" ++
-            if null captured then "Stderr not captured because WithStderr False was used\n"
-            else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
-            else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
+        liftIO $ throwIO $ CommandIOException funcName optRealCommand optUserCommand
+                                              cwd exit captured exceptionBuffer
+
+-- | An IO exception which arose from running a command.
+data CommandIOException =
+      CommandIOException { commandIO_funcName    :: String -- ^ The name of the command
+                         , commandIO_realCommand :: String -- ^ The command line which was run
+                         , commandIO_userCommand :: String -- ^ The user given name to the command (by using 'UserCommand')
+                         , commandIO_cwd  :: FilePath -- ^ Directory the command was run in
+                         , commandIO_exit :: ExitCode -- ^ The exit code of the command
+                         , commandIO_captured :: [String] -- ^ The handles which were captured (ie "Stderr", "Stdout", modified with 'WithStdout' and 'WithStderr')
+                         , commandIO_exceptionBuffer :: [String] -- ^ The captured output
+                         }
+
+instance Exception CommandIOException
+
+instance Show CommandIOException where
+  show CommandIOException{..} =
+    "Development.Shake." ++ commandIO_funcName ++ ", system command failed\n" ++
+    "Command line: " ++ commandIO_realCommand ++ "\n" ++
+    (if commandIO_realCommand /= commandIO_userCommand then "Original command line: " ++ commandIO_userCommand ++ "\n" else "") ++
+    commandIO_cwd ++
+    "Exit code: " ++ show (case commandIO_exit of ExitFailure i -> i; _ -> 0) ++ "\n" ++
+    if null commandIO_captured then "Stderr not captured because WithStderr False was used\n"
+    else if null commandIO_exceptionBuffer then intercalate " and " commandIO_captured ++ " " ++ (if length commandIO_captured == 1 then "was" else "were") ++ " empty"
+    else intercalate " and " commandIO_captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat commandIO_exceptionBuffer)
 
 
 mergeCwd :: [FilePath] -> Maybe FilePath
