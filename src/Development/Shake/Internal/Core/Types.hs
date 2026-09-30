@@ -439,6 +439,12 @@ userRuleSize (Versioned _ x) = userRuleSize x
 
 type Database = DatabasePoly Key Status
 
+-- The only instantiation of the Core.Database lookups; every caller imports this module.
+-- These rules are orphans (the functions live in Core.Database), which is harmless here.
+{-# SPECIALISE getValueFromKey :: Database -> Key -> IO (Maybe Status) #-}
+{-# SPECIALISE getIdFromKey :: Database -> IO (Key -> Maybe Id) #-}
+{-# SPECIALISE mkId :: Database -> Key -> Locked Id #-}
+
 -- global constants of Action
 data Global = Global
     {globalBuild :: [String] -> [Key] -> Action [Value]

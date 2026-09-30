@@ -59,6 +59,7 @@ createDatabase status journal vDefault = do
 -- SAFE READ-ONLY
 
 getValueFromKey :: (Eq k, Hashable k) => DatabasePoly k v -> k -> IO (Maybe v)
+{-# INLINABLE getValueFromKey #-}
 getValueFromKey Database{..} k = do
     is <- readIORef intern
     case Intern.lookup k is of
@@ -76,6 +77,7 @@ getKeyValuesFromId :: DatabasePoly k v -> IO (Map.HashMap Id (k, v))
 getKeyValuesFromId Database{..} = Ids.toMap status
 
 getIdFromKey :: (Eq k, Hashable k) => DatabasePoly k v -> IO (k -> Maybe Id)
+{-# INLINABLE getIdFromKey #-}
 getIdFromKey Database{..} = do
     is <- readIORef intern
     pure $ flip Intern.lookup is
@@ -86,6 +88,7 @@ getIdFromKey Database{..} = do
 
 -- | Ensure that a Key has a given Id, creating an Id if there is not one already
 mkId :: (Eq k, Hashable k) => DatabasePoly k v -> k -> Locked Id
+{-# INLINABLE mkId #-}
 mkId Database{..} k = liftIO $ do
     is <- readIORef intern
     case Intern.lookup k is of

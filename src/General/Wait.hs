@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DeriveFunctor #-}
 
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Wait(
@@ -18,10 +17,12 @@ import Prelude
 
 
 runWait :: Monad m => Wait m a -> m (Wait m a)
+{-# INLINABLE runWait #-}
 runWait (Lift x) = runWait =<< x
 runWait x = pure x
 
 fromLater :: Monad m => Wait m a -> (a -> m ()) -> m ()
+{-# INLINABLE fromLater #-}
 fromLater (Lift x) f = do x <- x; fromLater x f
 fromLater (Now x) f = f x
 fromLater (Later x) f = x f
@@ -32,9 +33,15 @@ quickly = Lift . fmap Now
 data Wait m a = Now a
               | Lift (m (Wait m a))
               | Later ((a -> m ()) -> m ())
-                deriving Functor
+
+instance Functor m => Functor (Wait m) where
+    {-# INLINABLE fmap #-}
+    fmap f (Now x) = Now $ f x
+    fmap f (Lift x) = Lift $ fmap (fmap f) x
+    fmap f (Later x) = Later $ \c -> x $ \a -> c $ f a
 
 instance (Monad m, Applicative m) => Applicative (Wait m) where
+    {-# INLINABLE (<*>) #-}
     pure = Now
     Now x <*> y = x <$> y
     Lift x <*> y = Lift $ (<*> y) <$> x
@@ -44,6 +51,7 @@ instance (Monad m, Applicative m) => Applicative (Wait m) where
     Later x <*> Later y = Later $ \c -> x $ \x -> y $ \y -> c $ x y
 
 instance (Monad m, Applicative m) => Monad (Wait m) where
+    {-# INLINABLE (>>=) #-}
     return = pure
     (>>) = (*>)
     Now x >>= f = f x
@@ -55,12 +63,14 @@ instance (Monad m, Applicative m) => Monad (Wait m) where
             _ -> fromLater x c
 
 instance (MonadIO m,  Applicative m) => MonadIO (Wait m) where
+    {-# INLINABLE liftIO #-}
     liftIO = Lift . liftIO . fmap Now
 
 instance MonadFail m => MonadFail (Wait m) where
     fail = Lift . Control.Monad.Fail.fail
 
 firstJustWaitUnordered :: MonadIO m => (a -> Wait m (Maybe b)) -> [a] -> Wait m (Maybe b)
+{-# INLINABLE firstJustWaitUnordered #-}
 firstJustWaitUnordered f = go 0 [] . map f
     where
         -- keep a list of those things we might visit later, and ask for each we see in turn
@@ -88,6 +98,7 @@ firstJustWaitUnordered f = go 0 [] . map f
 
 
 firstLeftWaitUnordered :: MonadIO m => (a -> Wait m (Either e b)) -> [a] -> Wait m (Either e [b])
+{-# INLINABLE firstLeftWaitUnordered #-}
 firstLeftWaitUnordered f xs = do
         let n = length xs
         mut <- liftIO $ newArray n undefined
