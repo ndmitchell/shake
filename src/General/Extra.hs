@@ -27,6 +27,10 @@ module General.Extra(
     ) where
 
 import Control.Exception.Extra
+#if __GLASGOW_HASKELL__ >= 912
+import Control.Exception.Backtrace
+import Control.Exception.Context
+#endif
 import Data.Char
 import Data.List.Extra
 import System.Environment
@@ -287,10 +291,16 @@ parseCallStack = reverse . map trimStart . drop1 . lines
 
 callStackFull = parseCallStack $ prettyCallStack $ popCallStack callStack
 
-#if __GLASGOW_HASKELL__ < 912
+#if __GLASGOW_HASKELL__ >= 912
+-- GHC 9.12 moved call stacks from ErrorCall into exception annotations.
+callStackFromException e = (concatMap parseBacktraces $ getExceptionAnnotations $ someExceptionContext e, e)
+    where
+        parseBacktraces = reverse . map trimStart . takeWhile ("  " `isPrefixOf`) . drop1 .
+            dropWhile (/= "HasCallStack backtrace:") . lines . displayBacktraces
+#else
 callStackFromException e | Just (ErrorCallWithLocation msg loc) <- fromException e = (parseCallStack loc, toException $ ErrorCall msg)
-#endif
 callStackFromException e = ([], e)
+#endif
 
 
 ---------------------------------------------------------------------
