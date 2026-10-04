@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #860, add specialise pragmas (maybe 10% faster)
     Test with GHC 9.14, preserving exception call stacks on GHC 9.12 and later
 0.19.9, released 2026-01-19
     Test with GHC 9.12, improving some errors
