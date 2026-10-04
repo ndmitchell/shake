@@ -38,6 +38,12 @@ import Data.Either.Extra
 import System.Time.Extra
 
 
+-- All of General.Wait is used at Locked here; its functions are INLINABLE.
+{-# SPECIALISE runWait :: Wait Locked a -> Locked (Wait Locked a) #-}
+{-# SPECIALISE fromLater :: Wait Locked a -> (a -> Locked ()) -> Locked () #-}
+{-# SPECIALISE firstJustWaitUnordered :: (a -> Wait Locked (Maybe b)) -> [a] -> Wait Locked (Maybe b) #-}
+
+
 ---------------------------------------------------------------------
 -- LOW-LEVEL OPERATIONS ON THE DATABASE
 

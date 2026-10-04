@@ -44,19 +44,23 @@ binaryOpMap mp = BinaryOp
 
 
 binarySplit :: forall a . Storable a => BS.ByteString -> (a, BS.ByteString)
+{-# INLINABLE binarySplit #-}
 binarySplit bs | BS.length bs < sizeOf (undefined :: a) = error "Reading from ByteString, insufficient left"
                | otherwise = unsafeBinarySplit bs
 
 binarySplit2 :: forall a b . (Storable a, Storable b) => BS.ByteString -> (a, b, BS.ByteString)
+{-# INLINABLE binarySplit2 #-}
 binarySplit2 bs | BS.length bs < sizeOf (undefined :: a) + sizeOf (undefined :: b) = error "Reading from ByteString, insufficient left"
                 | (a,bs) <- unsafeBinarySplit bs, (b,bs) <- unsafeBinarySplit bs = (a,b,bs)
 
 binarySplit3 :: forall a b c . (Storable a, Storable b, Storable c) => BS.ByteString -> (a, b, c, BS.ByteString)
+{-# INLINABLE binarySplit3 #-}
 binarySplit3 bs | BS.length bs < sizeOf (undefined :: a) + sizeOf (undefined :: b) + sizeOf (undefined :: c) = error "Reading from ByteString, insufficient left"
                 | (a,bs) <- unsafeBinarySplit bs, (b,bs) <- unsafeBinarySplit bs, (c,bs) <- unsafeBinarySplit bs = (a,b,c,bs)
 
 
 unsafeBinarySplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
+{-# INLINABLE unsafeBinarySplit #-}
 unsafeBinarySplit bs = (v, BS.unsafeDrop (sizeOf v) bs)
     where v = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
 
@@ -173,20 +177,24 @@ instance BinaryEx Float where
 
 
 putExStorable :: forall a . Storable a => a -> Builder
+{-# INLINABLE putExStorable #-}
 putExStorable x = Builder (sizeOf x) $ \p i -> pokeByteOff p i x
 
 getExStorable :: forall a . Storable a => BS.ByteString -> a
+{-# INLINABLE getExStorable #-}
 getExStorable = \bs -> unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, size) ->
         if size /= n then error "size mismatch" else peek (castPtr p)
     where n = sizeOf (undefined :: a)
 
 
 putExStorableList :: forall a . Storable a => [a] -> Builder
+{-# INLINABLE putExStorableList #-}
 putExStorableList xs = Builder (n * length xs) $ \ptr i ->
     for2M_ [i,i+n..] xs $ \i x -> pokeByteOff ptr i x
     where n = sizeOf (undefined :: a)
 
 getExStorableList :: forall a . Storable a => BS.ByteString -> [a]
+{-# INLINABLE getExStorableList #-}
 getExStorableList = \bs -> unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, size) ->
     let (d,m) = size `divMod` n in
     if m /= 0 then error "size mismatch" else forM [0..d-1] $ \i -> peekElemOff (castPtr p) i
