@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards, PatternGuards, ScopedTypeVariables, NamedFieldPuns, GADTs #-}
 {-# LANGUAGE Rank2Types, ConstraintKinds, TypeOperators, TupleSections, ViewPatterns #-}
