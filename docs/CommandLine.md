@@ -8,6 +8,7 @@ There are a number of different modes in which Shake can run, which have an over
 
 * `-h, --help` -- print the a message about supported command line flags and exit.
 * `-v, --version, --numeric-version` -- print version information and exit. This will always be the Shake version number as available on Hackage.
+* `--list-targets[=PATTERN]` -- print the available targets (those matching `PATTERN`, if given) along with any documentation from `withTargetDocs`, and exit.
 * `--demo` -- run in demo mode, which creates a demo project and compiles it, producing [this output](Demo.md).
 * `-f FILE, --file=FILE, --makefile=FILE` -- read in `FILE` as a Makefile or [Ninja project](Ninja.md). By default will look for `build.ninja` and use that if it exists.
 * `-t TOOL, --tool=TOOL` -- Ninja-compatible tools such as `compdb`, only valid when operating on a Ninja project.

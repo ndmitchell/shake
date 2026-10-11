@@ -15,6 +15,7 @@ import Development.Shake.Internal.CompactUI
 import Development.Shake.Internal.Demo
 import Development.Shake.Internal.Core.Action
 import Development.Shake.FilePath
+import Development.Shake.Internal.FilePattern
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Progress
 import Development.Shake.Database
@@ -148,6 +149,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         changeDirectory = listToMaybe [x | ChangeDirectory x <- flagsExtra]
         printDirectory = lastDef False [x | PrintDirectory x <- flagsExtra]
         shareRemoves = [x | ShareRemove x <- flagsExtra]
+        listTargets = [x | ListTargets x <- flagsExtra]
         oshakeOpts = foldl' (flip ($)) baseOpts flagsShake
     lintInside <- mapM canonicalizePath $ shakeLintInside oshakeOpts
     let shakeOpts = oshakeOpts {shakeLintInside = map (toStandard . addTrailingPathSeparator) lintInside
@@ -158,18 +160,21 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                                }
     let putWhen v msg = when (shakeVerbosity oshakeOpts >= v) $ shakeOutput oshakeOpts v msg
     let putWhenLn v msg = putWhen v $ msg ++ "\n"
+    -- run the rules as simply as we can, to find the targets and help suffix
+    let collectTargets = do
+            rs <- rules shakeOpts [] []
+            case rs of
+                Just (_, rs) -> do
+                    xs <- getTargets shakeOpts rs
+                    helpSuffix <- getHelpSuffix shakeOpts rs
+                    evaluate $ force (xs, helpSuffix)
+                _ -> pure ([], [])
+    let showTarget (a, b) = a ++ maybe "" (" - " ++) b
     let showHelp long = do
             progName <- getProgName
             (targets, helpSuffix) <- if not long then pure ([], []) else
-                handleSynchronous (\e -> do putWhenLn Info $ "Failure to collect targets: " ++ show e; pure ([], [])) $ do
-                    -- run the rules as simply as we can
-                    rs <- rules shakeOpts [] []
-                    case rs of
-                        Just (_, rs) -> do
-                            xs <- getTargets shakeOpts rs
-                            helpSuffix <- getHelpSuffix shakeOpts rs
-                            evaluate $ force (["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs], helpSuffix)
-                        _ -> pure ([], [])
+                handleSynchronous (\e -> do putWhenLn Info $ "Failure to collect targets: " ++ show e; pure ([], [])) $
+                    first (map (("  - " ++) . showTarget)) <$> collectTargets
             changes<- pure $
                 let as = shakeOptionsFields baseOpts
                     bs = shakeOptionsFields oshakeOpts
@@ -190,6 +195,9 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
 
     if Help `elem` flagsExtra then
         showHelp True
+     else if not $ null listTargets then do
+        targets <- filter ((?==*) listTargets . fst) . fst <$> collectTargets
+        unless (null targets) $ putWhen Error $ intercalate "\n" $ map showTarget targets
      else if Version `elem` flagsExtra then
         putWhenLn Info $ "Shake build system, version " ++ shakeVersionString
      else if NumericVersion `elem` flagsExtra then
@@ -279,6 +287,7 @@ data Extra = ChangeDirectory FilePath
            | NumericVersion
            | PrintDirectory Bool
            | Help
+           | ListTargets FilePattern
            | Sleep
            | NoTime
            | Exception
@@ -336,6 +345,7 @@ shakeOptsEx =
     ,opts $ Option ""  ["lint-fsatrace"] (optArg "DIR" $ \x s -> s{shakeLint=Just LintFSATrace, shakeLintInside=shakeLintInside s ++ [fromMaybe "." x]}) "Use fsatrace to do validation [in current dir]."
     ,opts $ Option ""  ["lint-ignore"] (reqArg "PATTERN" $ \x s -> s{shakeLintIgnore=shakeLintIgnore s ++ [x]}) "Ignore any lint errors in these patterns."
     ,opts $ Option ""  ["no-lint"] (noArg $ \s -> s{shakeLint=Nothing}) "Turn off --lint."
+    ,extr $ Option ""  ["list-targets"] (optArg "PATTERN" $ \x -> [ListTargets $ fromMaybe "//" x]) "List the available targets [matching PATTERN] and exit."
     ,opts $ Option ""  ["live"] (optArg "FILE" $ \x s -> s{shakeLiveFiles=shakeLiveFiles s ++ [fromMaybe "live.txt" x]}) "List the files that are live [to live.txt]."
     ,opts $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
     ,extr $ Option ""  ["numeric-version"] (noArg [NumericVersion]) "Print just the version number and exit."

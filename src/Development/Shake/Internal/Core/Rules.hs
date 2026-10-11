@@ -189,7 +189,7 @@ instance (Semigroup a, Monoid a) => Monoid (Rules a) where
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned False $ UserRule r}
 
--- | Register a target, as available when passing @--help@ or through 'getTargets'.
+-- | Register a target, as available when passing @--help@ or @--list-targets@, or through 'getTargets'.
 --   Called automatically by rules such as 'Development.Shake.phony' and
 --   'Development.Shake.%>' - to avoid that use 'withoutTargets'.
 --   To add documentation to a target use 'withTargetDocs'.
