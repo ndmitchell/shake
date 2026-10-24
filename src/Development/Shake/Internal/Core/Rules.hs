@@ -6,7 +6,7 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, SRules(..), runRules,
-    RuleResult, addBuiltinRule, addBuiltinRuleEx,
+    RuleResult, addBuiltinRule, addBuiltinRuleStaged, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
     getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
@@ -240,21 +240,31 @@ type family RuleResult key -- = value
 addBuiltinRule
     :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRule = withFrozenCallStack $ addBuiltinRuleInternal $ BinaryOp
+addBuiltinRule lint check run = addBuiltinRuleStaged lint check (builtinRun' run)
+
+addBuiltinRuleStaged
+    :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
+    => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun' key value -> Rules ()
+addBuiltinRuleStaged = withFrozenCallStack $ addBuiltinRuleInternal $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
     (runGet get . LBS.fromChunks . pure)
 
 addBuiltinRuleEx
     :: (RuleResult key ~ value, ShakeValue key, BinaryEx key, Typeable value, NFData value, Show value, Partial)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRuleEx = addBuiltinRuleInternal $ BinaryOp putEx getEx
-
+addBuiltinRuleEx = addBuiltinRuleInternal' $ BinaryOp putEx getEx
 
 -- | Unexpected version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
-addBuiltinRuleInternal
+addBuiltinRuleInternal'
     :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
     => BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
+addBuiltinRuleInternal' binary lint check run =
+    addBuiltinRuleInternal binary lint check (builtinRun' run)
+
+addBuiltinRuleInternal
+    :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
+    => BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun' key value -> Rules ()
+addBuiltinRuleInternal binary lint check (run :: BuiltinRun' key value) = do
     let k = Proxy :: Proxy key
     let lint_ k v = lint (fromKey k) (fromValue v)
     let check_ k v = check (fromKey k) (fromValue v)
